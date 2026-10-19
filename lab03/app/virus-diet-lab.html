@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Virus Diet Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;600&family=Source+Sans+3:wght@400;600;700&family=Roboto+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column. Shared genome loader on top, then tabs: Diet · Codons · Genes · Translator · How it works. Light only, blue/white/green. */
+:root{
+  --bg:#f7f9fc; --white:#ffffff; --ink:#1b2a3a; --muted:#5b6b7d; --line:#dde4ee; --soft:#eef3fa;
+  --blue:#1f5fbf; --blue-soft:#e6eefb; --green:#1e8a4c; --green-soft:#e5f4ea;
+  --f-head:"Lexend",system-ui,sans-serif;
+  --f-body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"Roboto Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 var(--f-body)}
+.wrap{max-width:980px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-direction:column;gap:6px}
+.course{font-size:14px;color:var(--muted)}
+h1{font:600 clamp(28px,5vw,38px)/1.15 var(--f-head);margin:0;color:var(--blue);text-wrap:balance}
+.lede{margin:0;color:var(--muted);max-width:66ch;font-size:17px}
+h2{font:600 19px/1.3 var(--f-head);margin:0}
+h3{font:600 16px/1.3 var(--f-head);margin:0}
+p{margin:0}
+.muted{color:var(--muted)}
+.card{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.loader{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.file{display:flex;align-items:center;gap:10px;border:1px dashed #b9c6d8;border-radius:8px;padding:10px 14px;background:var(--soft);flex:1 1 300px;min-width:0}
+.file.over{border-color:var(--blue);background:var(--blue-soft)}
+.file input{font:14px var(--f-body);max-width:100%}
+button{font:600 15px var(--f-body);border-radius:8px;padding:9px 16px;cursor:pointer;border:1px solid var(--line);background:var(--white);color:var(--ink)}
+button:hover{border-color:var(--blue);color:var(--blue)}
+button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+button.primary:hover{background:#184c99;color:#fff}
+button.small{font-size:13.5px;padding:6px 12px}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,[role=tab]:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+select,textarea{font:15px var(--f-body);color:var(--ink);background:var(--white);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+textarea{font-family:var(--f-mono);font-size:14px;width:100%;min-height:90px;resize:vertical;word-break:break-all}
+.status{font:13.5px var(--f-mono);color:var(--muted);word-break:break-word}
+.status.ok{color:var(--green)}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.summary div{background:var(--soft);border-radius:8px;padding:10px 12px}
+.summary b{display:block;font:600 20px var(--f-head);font-variant-numeric:tabular-nums}
+.summary span{font-size:13px;color:var(--muted)}
+.gname{font:13.5px var(--f-mono);color:var(--muted);word-break:break-word}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);overflow-x:auto}
+.tabs button{border:none;border-radius:8px 8px 0 0;background:none;padding:10px 14px;font-size:15px;color:var(--muted);margin-bottom:-2px;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--blue);border-bottom-color:var(--blue)}
+.head-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:10px}
+.head-row > div{min-width:0;flex:1 1 300px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:14px;color:var(--muted)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.chart{display:flex;flex-direction:column;gap:2px}
+.row{display:grid;grid-template-columns:200px 1fr 60px 120px;gap:10px;align-items:center;font-size:14.5px;padding:3px 0;border-bottom:1px solid var(--soft)}
+.row .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .nm b{font-family:var(--f-mono);font-weight:500;margin-right:6px}
+.badge{font-size:11.5px;padding:0 6px;border-radius:4px;background:var(--soft);color:var(--muted);margin-left:4px}
+.badge.ess{background:var(--green-soft);color:var(--green)}
+.track{position:relative;height:14px}
+.track::after{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:#9aa9bb}
+.bar{position:absolute;top:1px;bottom:1px;border-radius:2px}
+.bar.up{left:50%;background:var(--blue)} .bar.dn{right:50%;background:var(--green)}
+.num{font:13px var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+.num.up{color:var(--blue)} .num.dn{color:var(--green)}
+.num.dim{color:var(--muted)}
+@media (max-width:620px){.row{grid-template-columns:110px 1fr 54px}.row .full,.row .num.dim{display:none}}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:720px){.two{grid-template-columns:1fr}}
+.box{border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.box.limit{background:var(--blue-soft)} .box.prefer{background:var(--green-soft)}
+.box.limit h3{color:var(--blue)} .box.prefer h3{color:var(--green)}
+.box p{font-size:15px;color:var(--muted)}
+.foods{display:flex;flex-wrap:wrap;gap:6px}
+.food{background:var(--white);border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:15px}
+.food small{display:block;font:11px var(--f-mono);color:var(--muted)}
+.note{border-left:3px solid var(--blue);background:var(--soft);padding:12px 16px;border-radius:0 8px 8px 0;font-size:15px}
+.note ul{margin:6px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
+th{font-size:13px;font-weight:600;color:var(--muted);background:var(--soft)}
+td.m{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+tr.click{cursor:pointer} tr.click:hover td{background:var(--blue-soft)} tr.sel td{background:var(--blue-soft)}
+.minibar{height:8px;background:var(--blue);border-radius:2px}
+.ctab{min-width:640px}
+.ctab td{vertical-align:top;padding:6px 8px}
+.ctab .cell{display:grid;grid-template-columns:38px 34px 1fr;gap:6px;padding:2px 4px;border-radius:4px;font-size:13px}
+.ctab .cell span:first-child{font-family:var(--f-mono)}
+.ctab .cell span:last-child{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+.ctab th.side{width:36px;text-align:center;font:600 16px var(--f-head);color:var(--blue)}
+.protein{font:13px/1.7 var(--f-mono);background:var(--soft);border-radius:8px;padding:12px;word-break:break-all;white-space:pre-wrap;max-height:220px;overflow:auto}
+.trow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.result{font:15px var(--f-mono);background:var(--soft);border-radius:8px;padding:10px 12px;word-break:break-all}
+ol.steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:12px}
+ol.steps li::marker{font:600 16px var(--f-head);color:var(--blue)}
+ol.steps p{color:var(--muted);max-width:70ch}
+code{font:13.5px var(--f-mono);background:var(--soft);padding:1px 5px;border-radius:4px}
+.cs{font-size:14px;color:var(--green)}
+dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;margin:0}
+dt{font-weight:700}
+dd{margin:0;color:var(--muted)}
+@media (max-width:560px){dl{grid-template-columns:1fr}dd{margin-bottom:6px}}
+footer{font-size:13.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="course">Bioinformatics · FILS, POLITEHNICA Bucharest · Lab 03</div>
+    <h1>Virus Diet Lab</h1>
+    <p class="lede">Load a virus or bacteria genome. The app finds its genes, counts its codons and amino acids, and checks which ones it uses more than normal proteins do, then turns that into a food list.</p>
+  </header>
+
+  <section class="card" aria-labelledby="load-h">
+    <h2 id="load-h">Genome</h2>
+    <div class="loader">
+      <label class="file" id="drop" for="file">
+        <input type="file" id="file" accept=".fasta,.fna,.fa,.fas,.txt,.gz">
+      </label>
+      <button id="sample">Use sample virus</button>
+      <select id="method" aria-label="Counting method">
+        <option value="genes">Count amino acids in genes only</option>
+        <option value="window">Count with sliding window of 3</option>
+      </select>
+      <button class="primary" id="go">Analyze</button>
+    </div>
+    <p class="muted" style="font-size:14px">FASTA files: <code>.fasta</code>, <code>.fna</code>, <code>.fa</code>, or the zipped <code>.gz</code> straight from NCBI. You can drag a file onto the box too.</p>
+    <div class="status" id="status"></div>
+    <div class="gname" id="gname"></div>
+    <div class="summary" id="summary"></div>
+  </section>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" id="t-diet" aria-controls="p-diet" aria-selected="true">Diet analysis</button>
+    <button role="tab" id="t-codons" aria-controls="p-codons" aria-selected="false">Codon frequency</button>
+    <button role="tab" id="t-genes" aria-controls="p-genes" aria-selected="false">Genes</button>
+    <button role="tab" id="t-trans" aria-controls="p-trans" aria-selected="false">Translator</button>
+    <button role="tab" id="t-how" aria-controls="p-how" aria-selected="false">How it works</button>
+  </nav>
+
+  <section class="card" role="tabpanel" id="p-diet" aria-labelledby="t-diet">
+    <div class="head-row">
+      <div>
+        <h2>Which amino acids does it overuse?</h2>
+        <p class="muted">Each amino acid's share in this genome's proteins, compared with an average protein.</p>
+      </div>
+      <button class="small" id="copyAA">Copy table</button>
+    </div>
+    <div class="legend">
+      <span><i class="dot" style="background:var(--blue)"></i>uses more than normal</span>
+      <span><i class="dot" style="background:var(--green)"></i>uses less than normal</span>
+      <span><span class="badge ess">essential</span> only comes from food</span>
+      <span><span class="badge">partly</span> body makes some</span>
+    </div>
+    <div class="chart" id="chart"></div>
+
+    <h2 style="margin-top:8px">Food list</h2>
+    <div class="two">
+      <div class="box limit"><h3>Limit</h3><p id="limitWhy"></p><div class="foods" id="limit"></div></div>
+      <div class="box prefer"><h3>Prefer</h3><p id="preferWhy"></p><div class="foods" id="prefer"></div></div>
+    </div>
+    <p class="muted" id="nodiet" style="font-size:15px"></p>
+    <div class="note">
+      <b>Reality check.</b> This is a classroom thought experiment, not a treatment.
+      <ul>
+        <li>A virus doesn't eat your food. It builds its proteins inside your cells, from the same amino acid supply your own cells use.</li>
+        <li>Your body keeps blood amino acid levels steady and takes them from muscle when food is short, so a diet barely changes what a cell has.</li>
+        <li>Cutting an amino acid starves your own cells first, immune cells included.</li>
+        <li>No diet like this has good evidence against viral infections. The best-known try (low arginine, high lysine for cold sores) has weak, mixed results.</li>
+        <li>Don't fast while sick without a doctor's advice. And the sample virus infects plants, not people.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="card" role="tabpanel" id="p-codons" aria-labelledby="t-codons" hidden>
+    <div class="head-row">
+      <div>
+        <h2>Codon frequency</h2>
+        <p class="muted">A 3-letter window slides along the whole genome one letter at a time and adds 1 to the counter of each codon it sees.</p>
+      </div>
+      <button class="small" id="copyCodons">Copy all 64</button>
+    </div>
+    <h3>Top 10</h3>
+    <div class="tablewrap"><table id="top10"></table></div>
+    <h3>All 64 codons, laid out like the genetic code table</h3>
+    <p class="muted" style="font-size:14px">Darker blue = more frequent. If every codon were equally common, each would be 1.56%.</p>
+    <div class="tablewrap"><table class="ctab" id="ctab"></table></div>
+  </section>
+
+  <section class="card" role="tabpanel" id="p-genes" aria-labelledby="t-genes" hidden>
+    <div class="head-row">
+      <div>
+        <h2>Genes found</h2>
+        <p class="muted">Every stretch from ATG to a stop codon that is at least <select id="minLen" aria-label="Minimum gene length"><option>50</option><option selected>75</option><option>100</option><option>150</option></select> amino acids long, on both strands. Click a row to see its protein.</p>
+      </div>
+      <button class="small" id="copyAllFasta">Copy all as FASTA</button>
+    </div>
+    <div class="tablewrap"><table id="genes"></table></div>
+    <div id="geneView" hidden>
+      <div class="head-row"><h3 id="geneTitle"></h3><button class="small" id="copyFasta">Copy FASTA</button></div>
+      <div class="protein" id="protein"></div>
+    </div>
+  </section>
+
+  <section class="card" role="tabpanel" id="p-trans" aria-labelledby="t-trans" hidden>
+    <h2>DNA → protein translator</h2>
+    <p class="muted">Paste a short DNA or mRNA sequence. It starts at the first ATG and stops at the first stop codon, like the lab 02 script.</p>
+    <label for="dna" class="muted" style="font-size:14px">Sequence</label>
+    <textarea id="dna" spellcheck="false">GCCATGAAAGCTTTCGGTTGGCACTAAGCA</textarea>
+    <div class="trow"><button class="primary" id="translate">Translate</button><span class="status" id="tstatus"></span></div>
+    <div class="result" id="tresult"></div>
+    <div class="tablewrap"><table id="ttable"></table></div>
+  </section>
+
+  <section class="card" role="tabpanel" id="p-how" aria-labelledby="t-how" hidden>
+    <h2>How it works, in simple words</h2>
+    <ol class="steps">
+      <li><h3>Read the genome</h3><p>A FASTA file is a name line starting with <code>&gt;</code>, then DNA letters split over many lines. The app glues the letters into one string and unzips <code>.gz</code> files by itself.</p><span class="cs">CS: parse a text file into a string</span></li>
+      <li><h3>Count codons</h3><p>A 3-letter window starts at the first letter, reads the codon, adds 1 to its counter, then moves one letter to the right. A genome of N letters gives N − 2 windows.</p><span class="cs">CS: sliding window + dictionary of 64 counters</span></li>
+      <li><h3>Find the genes</h3><p>A gene starts at <code>ATG</code> and ends at <code>TAA</code>, <code>TAG</code> or <code>TGA</code>. The app tries all 6 reading frames (3 on each strand), because viruses keep genes on both strands. Very short stretches are usually random, so they're dropped.</p><span class="cs">CS: scan in steps of 3, six times</span></li>
+      <li><h3>Translate and count amino acids</h3><p>Each codon in a gene is looked up in the genetic code table, and the 20 amino acids are counted.</p><span class="cs">CS: lookup table + counter</span></li>
+      <li><h3>Compare with a normal protein</h3><p>Average proteins (UniProt/Swiss-Prot) are about 9.7% leucine, 1.1% tryptophan, and so on. Virus share ÷ average share gives a ratio: ×2 means twice as much as normal.</p><span class="cs">CS: observed / expected, then sort</span></li>
+      <li><h3>Turn it into food</h3><p>Your body makes 11 of the 20 amino acids itself, so only the ones that come from food count. The app takes the top 4 overused ones and lists foods rich in them (limit) and foods low in them (prefer).</p><span class="cs">CS: filter, then map to a food table</span></li>
+    </ol>
+    <h2 style="margin-top:6px">Glossary</h2>
+    <dl>
+      <dt>Genome</dt><dd>All the DNA of an organism. Think of it as the hard drive.</dd>
+      <dt>Gene</dt><dd>One stretch of DNA that codes for one protein. One file on the drive.</dd>
+      <dt>Codon</dt><dd>3 letters of DNA or RNA that stand for one amino acid. One instruction.</dd>
+      <dt>Reading frame</dt><dd>Where you start cutting the DNA into 3-letter pieces. Starting 1 letter later gives completely different codons.</dd>
+      <dt>ORF</dt><dd>Open reading frame: from a start codon to the next stop codon with no stop in between. A gene candidate.</dd>
+      <dt>GC content</dt><dd>The share of G and C letters. Low GC means A/T-rich codons dominate.</dd>
+      <dt>Essential amino acid</dt><dd>One your body can't make, so it has to come from food: His, Ile, Leu, Lys, Met, Phe, Thr, Trp, Val.</dd>
+      <dt>Codon usage bias</dt><dd>Organisms prefer some codons over others for the same amino acid. It works like a fingerprint.</dd>
+      <dt>FASTA</dt><dd>A simple text format for sequences: a <code>&gt;</code> name line, then the letters.</dd>
+    </dl>
+  </section>
+
+  <footer>Average protein composition: UniProtKB/Swiss-Prot. Food lists are general sources, not measured values.</footer>
+</div>
+
+<script>
+const SAMPLE={name:"NC_021202.1 Ageratum Yellow vein China virus - OX1, complete genome",seq:"ACCGGATGGCCGCGATTTTTTTTAAAGTGGTCACCACCACTAACAAATGTCCTCCACTAAAAACGCTCCCTCAAAGCTTATTTAATTCAAATCCATTATAAATACTTGGTCCCCAAGTATTAAAGCTAAACATGTGGGATCCTCTTTTGAACGAGTTTCCCGAAACCGTACACGGGTTTAGGTGTATGTTAGCCATTAAGTATTTGCAATTAGTTGAAAATACATACTCTCCTGATACATTAGGGTACGATTTGCTTCGTGATTTAATTTCAGTTATTCGTGCTAGAGATTATGTCGAAGCGTCCCGCCGATATAGTCATTTCCACTCCCGCATCCAAGGTGCGTCGCCGTCTGAACTTCGACAGCCCGTATGTCAGCCGTGCTGCTGCCCCCACTGTCCTCGTCACAAACAAAAGGAGGTCATGGGTGAATCGGCCCATGTACCGAAAGCCCAGGATGTACAGGATGTATAGAAGCCCTGATGTTCCTAAGGGTTGTGAAGGCCCGTGTAAGGTGCAGTCCTATGAGGCCCGTCATGATGTGTCCCATACTGGTAAGGTCATATGTGTCACGGATGTTACACGTGGTAATGGTATTACCCATCGAGTTGGTAAGAGGTTTTGTGTGAAATCCATCTACGTCATTGGGAAGATATGGATGGATGAAAATATTAAATTGAAGAATCACACCAATACAGTTATGTTTTTTCTAGTTAGAGATCGGCGTCCGAGTGGTACTCCGATGGATTTCCAGCAGGTTTTTAATTGTTATGACAATGAGCCAAGCACTGGTACTGTGAAGAATGATCTCAGGGATAGGTTTCAAGTCATTCGGAAGTTCAACTATATGGTTACTGGTGGGCAGTATGCGTCTAAAGAACAGGCATTGGTGAAGAAGTTCATGCGGGTTAATACCCATGTTGTTTACAACCATCAAGAACAGGCAAAGTATGAGAATCATACGGAGAATGCATTATTGTTGTATATGGTTTCTACTCATGCTAGTAATCCTGTATATGCGACTTTGAAAGTCCGCATCTATTTCTATGATTCACAAATGAATTAATAAATATTGAATTTTATTATATTTGAATGTCTTACATATTCTGTGTTTTCCAATACATCCCATAATACATGATTACATGCTCTAATTACATTATTAATACTAATTACACCCAAATTATCTAAATATTTCATACATTGAACCCTAAATACTCTTAAGAAACGCCAAGTCTGAGGTTGTAAGCGAGTCCAGATCTGGAAGATCAGAAAACACTGGTGTATTCCCAACGCTTTCCTCAGGTTGTGGTTGAATTGTATTTGGATCGTTATGATGTCGTGGTTGGTGTTGAATGGTCTCTCGTGGTGCTTGGTTATCTTGAAATATAGGGGATTTTTGATTGTCCAGGTATACACGCCACTCTCGCATTGAGTTGCAGTGAGTAATTCCCCTGTGCGAAAATCCATGATTTGCACAATCTATGCCGAAGTAGTATGAGCACCCGCACGTTAGATCAACTCTCCGTCTCCGAATGGGCTTCCTCTTGGATATTCTGTGTTGCACTTTGATTGGCACCTGAGTACAATGCGCTGTTGAGGGTGATGAATTCTGCATTCTTTAATGCCCAATCTTTTAAAGCTGAATTTTTATCCTCATTCAAGTACTCTTTATATGATGATGTTGGGCCTGGATTGCAAAGGAAGATAGTTGGGATTCCACCTTTAATTTGAATTGGTTTCCCGTACTTAGTGTTGCTTTGCCAGTCCCTTTGGGCCCCCATGAATTCTTTAAAGTGCTTTAGATAATGGGGGTCTACGTCATCAATGACGTTATACCAAGCATCATTACTGTATACCTTTGGGCTTAGATCAAGATGTCCACACAAATAATTGTGTGGTCCCAGTGATCTGGCCCACATTGTTTTACCTGTACGACTATCACCTTCTATCACAATACTTTTGGGTCTCCAAGGCCGCGCAGCGGCACCACTCACATTTTCAGAAACCCACTCTTCAAGTTCTTCTGGAACTTGATCGAATGAAGAAGAAAGAAATGGACAAACAAAAACCTCTAAAGGAGGTGCAAAAATCCTATCTAAGTTAGAGTTTAAATTATGAAATTGTAAAACATAATCTTTAGGAGCTAACTCCTTAATTACTCTAAGAGCCTCAGACTTACTGCCGCTGTTAATTGCCTGGGCGTAAGCGTCATTGGCTGTCTGTTGTCCCCCTCTTGCAGAGCGTCCGTCGATCTGAAATTCTCCCCATTCGAGGGTGTCTCCGTCCTTCTCCAGGTAGGACTTGACGTCGGAGCTGGATTTAGCTCCCTGAATGTTCGGATGGAAATGTGCTGACCTGGTTGGGGAGACCAGGTCGAAGAATCTGTTATTTTGGCATTTGTATTTGCCTTCGAATTGGATAAGCACGTGGAGATGAGGGCTCCCATCTTCATGAAGTTCGCTGCAGATTTTGATGTATTTTTTATTTGTTGGGGTGTTTAGGTTTTTTATTTGGGAAAGTGCCTCTTCTTTAGTAAGAGAGCATTGTGGATAAGTGAGGAAAAAGTTTTTGGCATATATTTGAAAACGCTTAGGAGGAGCCATTGACTTGGTCAATCGGTACTCAACAAACTTGGCTATGCAATCGGTGATTGGTACTCAATATATAGTGAGTACCAAATGGCATGATTGTAATTTCTTAAAGAAATTCAAATTCCAATCGCGGCCATCCGTATAATATT"};
+
+const BASES="TCAG",AA1="FFLLSSSSYY**CC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG";
+const CODE={};let k=0;
+for(const x of BASES)for(const y of BASES)for(const z of BASES)CODE[x+y+z]=AA1[k++];
+const SHORT={F:"Phe",L:"Leu",S:"Ser",Y:"Tyr","*":"Stop",C:"Cys",W:"Trp",P:"Pro",H:"His",Q:"Gln",R:"Arg",I:"Ile",M:"Met",T:"Thr",N:"Asn",K:"Lys",V:"Val",A:"Ala",D:"Asp",E:"Glu",G:"Gly"};
+
+const AA={
+ A:["Alanine",8.25,"non"],R:["Arginine",5.53,"cond"],N:["Asparagine",4.06,"non"],D:["Aspartic acid",5.45,"non"],
+ C:["Cysteine",1.37,"cond"],Q:["Glutamine",3.93,"cond"],E:["Glutamic acid",6.75,"non"],G:["Glycine",7.07,"cond"],
+ H:["Histidine",2.27,"ess"],I:["Isoleucine",5.96,"ess"],L:["Leucine",9.66,"ess"],K:["Lysine",5.84,"ess"],
+ M:["Methionine",2.42,"ess"],F:["Phenylalanine",3.86,"ess"],P:["Proline",4.70,"cond"],S:["Serine",6.56,"non"],
+ T:["Threonine",5.34,"ess"],W:["Tryptophan",1.08,"ess"],Y:["Tyrosine",2.92,"cond"],V:["Valine",6.87,"ess"]
+};
+const FOOD={
+ H:{rich:["Tuna","Chicken breast","Pork","Beef","Soybeans","Parmesan"],low:["Fruit","Leafy greens","Potatoes"]},
+ I:{rich:["Eggs","Chicken","Fish","Cheese","Lentils","Soybeans"],low:["Fruit","Vegetables","Rice"]},
+ L:{rich:["Beef","Chicken","Fish","Cheese","Soybeans","Peanuts"],low:["Fruit","Leafy greens","Potatoes"]},
+ K:{rich:["Red meat","Fish","Eggs","Cheese","Lentils","Beans"],low:["Rice","Wheat bread","Pasta","Corn"]},
+ M:{rich:["Eggs","Fish","Brazil nuts","Sesame seeds","Chicken","Beef"],low:["Beans","Lentils","Fruit","Vegetables"]},
+ F:{rich:["Soybeans","Cheese","Eggs","Beef","Pumpkin seeds"],low:["Fruit","Vegetables","Rice"]},
+ T:{rich:["Cottage cheese","Chicken","Lentils","Fish","Pork","Eggs"],low:["Fruit","Vegetables","Corn"]},
+ W:{rich:["Turkey","Chicken","Oats","Milk","Cheese","Pumpkin seeds"],low:["Corn","Fruit","Vegetables"]},
+ V:{rich:["Cheese","Soybeans","Beef","Peanuts","Eggs","Fish"],low:["Fruit","Vegetables"]},
+ R:{rich:["Pumpkin seeds","Peanuts","Walnuts","Almonds","Chocolate","Soybeans"],low:["Milk","Yogurt","Fruit","Potatoes"]},
+ C:{rich:["Eggs","Chicken","Garlic","Onions","Sunflower seeds","Oats"],low:["Beans","Lentils","Fruit","Potatoes"]},
+ Q:{rich:["Beef","Chicken","Eggs","Milk","Tofu","Wheat"],low:["Fruit","Vegetables"]},
+ G:{rich:["Gelatin","Bone broth","Pork rinds","Chicken skin"],low:["Fruit","Vegetables"]},
+ P:{rich:["Gelatin","Bone broth","Cheese","Milk","Wheat"],low:["Fruit","Vegetables","Rice"]},
+ Y:{rich:["Cheese","Soybeans","Chicken","Fish","Peanuts","Almonds"],low:["Fruit","Vegetables","Rice"]}
+};
+
+const $=id=>document.getElementById(id);
+let current=null,last=null,selGene=null;
+
+function parseFasta(text){
+  const recs=[];let cur=null;
+  for(const raw of text.split(/\r?\n/)){
+    const l=raw.trim();if(!l)continue;
+    if(l[0]===">"){cur={name:l.slice(1),parts:[]};recs.push(cur);}
+    else{if(!cur){cur={name:"",parts:[]};recs.push(cur);}cur.parts.push(l.toUpperCase());}
+  }
+  return recs.map(r=>({name:r.name,seq:r.parts.join("").replace(/U/g,"T").replace(/[^ACGTN]/g,"")})).filter(r=>r.seq.length);
+}
+const revcomp=s=>s.split("").reverse().map(c=>({A:"T",T:"A",G:"C",C:"G"})[c]||"N").join("");
+
+function findGenes(recs,minLen){
+  const genes=[];
+  recs.forEach((r,ri)=>{
+    for(const [strand,s] of [["+",r.seq],["−",revcomp(r.seq)]]){
+      for(let f=0;f<3;f++){
+        let i=f;
+        while(i+3<=s.length){
+          if(s.substr(i,3)==="ATG"){
+            let p="",j=i;
+            while(j+3<=s.length){const a=CODE[s.substr(j,3)];if(a===undefined){p=null;break;}if(a==="*")break;p+=a;j+=3;}
+            if(p&&j+3<=s.length&&p.length>=minLen){
+              const start=strand==="+"?i+1:s.length-i,end=strand==="+"?j+3:s.length-j-2;
+              genes.push({rec:ri,strand,frame:f+1,start,end,len:p.length,prot:p});
+            }
+            i=j+3;
+          }else i+=3;
+        }
+      }
+    }
+  });
+  return genes.sort((a,b)=>b.len-a.len);
+}
+
+function codonCounts(recs){
+  const c={};for(const x of BASES)for(const y of BASES)for(const z of BASES)c[x+y+z]=0;
+  let n=0;
+  for(const r of recs){const s=r.seq;for(let i=0;i+3<=s.length;i++){const w=s.substr(i,3);if(w in c){c[w]++;n++;}}}
+  return {c,n};
+}
+
+function analyze(recs,method,minLen){
+  const total=recs.reduce((n,r)=>n+r.seq.length,0);
+  const gc=recs.reduce((n,r)=>n+(r.seq.match(/[GC]/g)||[]).length,0)/total*100;
+  const genes=findGenes(recs,minLen);
+  const codons=codonCounts(recs);
+  const counts={};
+  if(method==="genes"){for(const g of genes)for(const a of g.prot)counts[a]=(counts[a]||0)+1;}
+  else for(const [cd,v] of Object.entries(codons.c)){const a=CODE[cd];if(a!=="*")counts[a]=(counts[a]||0)+v;}
+  const n=Object.values(counts).reduce((a,b)=>a+b,0);
+  const rows=Object.keys(AA).map(a=>{const pct=n?(counts[a]||0)/n*100:0,ratio=pct/AA[a][1];return {a,count:counts[a]||0,pct,ratio,log:Math.log2(Math.max(ratio,.05))};}).sort((x,y)=>y.ratio-x.ratio);
+  return {total,gc,genes,codons,n,rows};
+}
+
+const badge=a=>AA[a][2]==="ess"?'<span class="badge ess">essential</span>':AA[a][2]==="cond"?'<span class="badge">partly</span>':"";
+
+function renderSummary(res,name){
+  $("gname").textContent=name;
+  $("summary").innerHTML=[[res.total.toLocaleString(),"nucleotides"],[res.gc.toFixed(1)+"%","GC content"],[res.genes.length,"genes found"],[res.n.toLocaleString(),"amino acids counted"]]
+    .map(([v,l])=>`<div><b>${v}</b><span>${l}</span></div>`).join("");
+}
+
+function renderDiet(res){
+  const maxAbs=Math.max(1,...res.rows.map(r=>Math.abs(r.log)));
+  $("chart").innerHTML=res.rows.map(r=>{
+    const up=r.ratio>=1,w=Math.abs(r.log)/maxAbs*50;
+    return `<div class="row" title="${AA[r.a][0]}: ${r.pct.toFixed(2)}% here vs ${AA[r.a][1]}% on average">
+      <div class="nm"><b>${SHORT[r.a]}</b><span class="full">${AA[r.a][0]}</span>${badge(r.a)}</div>
+      <div class="track"><div class="bar ${up?"up":"dn"}" style="width:${w}%"></div></div>
+      <div class="num ${up?"up":"dn"}">×${r.ratio.toFixed(2)}</div>
+      <div class="num dim">${r.pct.toFixed(2)}% / ${AA[r.a][1]}%</div></div>`;
+  }).join("");
+  const targets=res.rows.filter(r=>AA[r.a][2]!=="non"&&r.ratio>1.1).slice(0,4);
+  const nonDiet=res.rows.filter(r=>AA[r.a][2]==="non"&&r.ratio>1.1);
+  const lim=new Map(),pre=new Map();
+  for(const t of targets)for(const f of FOOD[t.a].rich){if(!lim.has(f))lim.set(f,[]);lim.get(f).push(SHORT[t.a]);}
+  for(const t of targets)for(const f of FOOD[t.a].low){if(lim.has(f))continue;if(!pre.has(f))pre.set(f,[]);pre.get(f).push(SHORT[t.a]);}
+  const chips=m=>[...m].sort((a,b)=>b[1].length-a[1].length).map(([f,as])=>`<div class="food">${f}<small>${as.join(" · ")}</small></div>`).join("");
+  if(targets.length){
+    $("limitWhy").textContent="Rich in what this genome uses most: "+targets.map(t=>`${AA[t.a][0]} (×${t.ratio.toFixed(2)})`).join(", ")+".";
+    $("preferWhy").textContent="Low in those same amino acids.";
+    $("limit").innerHTML=chips(lim);$("prefer").innerHTML=chips(pre);
+  }else{
+    $("limitWhy").textContent="No food-dependent amino acid is clearly overused, so there's nothing to limit.";
+    $("preferWhy").textContent="A normal balanced diet.";$("limit").innerHTML="";$("prefer").innerHTML="";
+  }
+  $("nodiet").innerHTML=nonDiet.length?`<b>Diet can't change:</b> ${nonDiet.map(r=>`${AA[r.a][0]} (×${r.ratio.toFixed(2)})`).join(", ")}. The genome overuses ${nonDiet.length>1?"these":"this"} too, but your body makes ${nonDiet.length>1?"them":"it"} itself.`:"";
+}
+
+function shade(p){const t=Math.min(p/3.5,1);return `rgba(31,95,191,${(0.06+t*0.5).toFixed(2)})`;}
+function renderCodons(res){
+  const {c,n}=res.codons,ranked=Object.entries(c).sort((a,b)=>b[1]-a[1]),max=ranked[0][1]||1;
+  $("top10").innerHTML="<tr><th>Rank</th><th>Codon</th><th>Amino acid</th><th>Count</th><th>Freq</th><th style='width:35%'></th></tr>"+
+    ranked.slice(0,10).map(([cd,v],i)=>`<tr><td class="m">${i+1}</td><td class="m">${cd}</td><td>${SHORT[CODE[cd]]}</td><td class="m">${v.toLocaleString()}</td><td class="m">${(v/n*100).toFixed(2)}%</td><td><div class="minibar" style="width:${v/max*100}%"></div></td></tr>`).join("");
+  const order="TCAG";
+  let h=`<tr><th></th>${[...order].map(b=>`<th style="text-align:center">2nd: ${b}</th>`).join("")}<th></th></tr>`;
+  for(const f of order){
+    h+=`<tr><th class="side">${f}</th>`;
+    for(const s of order){
+      h+="<td>"+[...order].map(t=>{const cd=f+s+t,p=c[cd]/n*100;return `<div class="cell" style="background:${shade(p)}" title="${cd}: ${c[cd]} times"><span>${cd}</span><span>${SHORT[CODE[cd]]}</span><span>${p.toFixed(2)}%</span></div>`;}).join("")+"</td>";
+    }
+    h+=`<th class="side" style="font:500 12px var(--f-mono);color:var(--muted)">${[...order].join("<br>")}</th></tr>`;
+  }
+  $("ctab").innerHTML=h;
+}
+
+function renderGenes(res){
+  selGene=null;$("geneView").hidden=true;
+  $("genes").innerHTML=res.genes.length?"<tr><th>#</th><th>Strand</th><th>Frame</th><th>Position (nt)</th><th>Length</th><th>Starts with</th></tr>"+
+    res.genes.slice(0,60).map((g,i)=>`<tr class="click" data-i="${i}" tabindex="0"><td class="m">${i+1}</td><td class="m">${g.strand}</td><td class="m">${g.frame}</td><td class="m">${g.start.toLocaleString()}–${g.end.toLocaleString()}</td><td class="m">${g.len} aa</td><td class="m">${g.prot.slice(0,18)}…</td></tr>`).join("")
+    :"<tr><td class='muted'>No genes this long were found. Try a smaller minimum length.</td></tr>";
+}
+function geneFasta(g,i){return `>gene_${i+1} strand=${g.strand} frame=${g.frame} pos=${g.start}-${g.end} len=${g.len}aa\n${g.prot.match(/.{1,60}/g).join("\n")}`;}
+function showGene(i){
+  const g=last.genes[i];selGene=i;
+  document.querySelectorAll("#genes tr").forEach(r=>r.classList.toggle("sel",r.dataset.i==String(i)));
+  $("geneTitle").textContent=`Gene ${i+1} · ${g.len} amino acids · strand ${g.strand}, frame ${g.frame}`;
+  $("protein").textContent=g.prot.match(/.{1,10}/g).join(" ");
+  $("geneView").hidden=false;
+}
+
+function run(){
+  if(!current){$("status").textContent="Choose a FASTA file or press “Use sample virus”.";return;}
+  const method=$("method").value;
+  last=analyze(current.recs,method,+$("minLen").value);
+  $("status").textContent=`✓ ${current.label} · ${method==="genes"?"amino acids from genes":"amino acids from sliding window"}`;
+  $("status").className="status ok";
+  renderSummary(last,current.recs[0].name+(current.recs.length>1?`  (+${current.recs.length-1} more records)`:""));
+  renderDiet(last);renderCodons(last);renderGenes(last);
+}
+
+async function readFile(file){
+  const head=new Uint8Array(await file.slice(0,2).arrayBuffer());
+  if(head[0]===0x1f&&head[1]===0x8b){
+    if(typeof DecompressionStream==="undefined")throw new Error("This browser can't unzip .gz files. Unzip it first, then load the .fna file.");
+    return await new Response(file.stream().pipeThrough(new DecompressionStream("gzip"))).text();
+  }
+  return await file.text();
+}
+async function loadFile(file){
+  $("status").className="status";$("status").textContent=`Reading ${file.name}…`;
+  try{const recs=parseFasta(await readFile(file));if(!recs.length)throw new Error("No DNA found. Is this a FASTA file?");current={recs,label:file.name};run();}
+  catch(e){$("status").textContent=e.message;}
+}
+
+function copyText(text,btn){
+  const done=()=>{const o=btn.textContent;btn.textContent="Copied";setTimeout(()=>btn.textContent=o,1200);};
+  const fallback=()=>{const t=document.createElement("textarea");t.value=text;document.body.appendChild(t);t.select();try{document.execCommand("copy");done();}catch(e){}t.remove();};
+  try{navigator.clipboard.writeText(text).then(done,fallback);}catch(e){fallback();}
+}
+
+function translate(){
+  const dna=$("dna").value.toUpperCase().replace(/[^ACGTU]/g,"");
+  const mrna=dna.replace(/T/g,"U"),start=mrna.indexOf("AUG");
+  $("ttable").innerHTML="";$("tresult").textContent="";
+  if(start<0){$("tstatus").textContent="No start codon (ATG/AUG) found.";return;}
+  const rows=[],prot=[];
+  for(let i=start;i+3<=mrna.length;i+=3){
+    const cd=dna.substr(i,3).replace(/U/g,"T"),a=CODE[cd];rows.push([dna.substr(i,3),mrna.substr(i,3),SHORT[a],a]);
+    if(a==="*")break;prot.push(a);
+  }
+  $("tstatus").textContent=`Start at nucleotide ${start+1} · ${prot.length} amino acids${rows.at(-1)[3]==="*"?"":" · no stop codon reached"}`;
+  $("tresult").textContent=prot.map(a=>SHORT[a]).join("-")+"   ("+prot.join("")+")";
+  $("ttable").innerHTML="<tr><th>DNA</th><th>mRNA</th><th>Protein</th><th>1-letter</th></tr>"+rows.map(r=>`<tr><td class="m">${r[0]}</td><td class="m">${r[1]}</td><td>${r[2]}</td><td class="m">${r[3]}</td></tr>`).join("");
+}
+
+document.querySelectorAll("[role=tab]").forEach(tab=>tab.addEventListener("click",()=>{
+  document.querySelectorAll("[role=tab]").forEach(t=>{const on=t===tab;t.setAttribute("aria-selected",on);$(t.getAttribute("aria-controls")).hidden=!on;});
+}));
+$("file").addEventListener("change",e=>{if(e.target.files[0])loadFile(e.target.files[0]);});
+const drop=$("drop");
+["dragenter","dragover"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop",e=>{const f=e.dataTransfer.files[0];if(f)loadFile(f);});
+$("go").addEventListener("click",run);
+$("method").addEventListener("change",()=>{if(current)run();});
+$("minLen").addEventListener("change",()=>{if(current)run();});
+$("sample").addEventListener("click",()=>{current={recs:[{name:SAMPLE.name,seq:SAMPLE.seq}],label:"sample virus (GCF_000907355.1)"};run();});
+$("genes").addEventListener("click",e=>{const r=e.target.closest("tr[data-i]");if(r)showGene(+r.dataset.i);});
+$("genes").addEventListener("keydown",e=>{const r=e.target.closest("tr[data-i]");if(r&&(e.key==="Enter"||e.key===" ")){e.preventDefault();showGene(+r.dataset.i);}});
+$("copyFasta").addEventListener("click",e=>{if(selGene!=null)copyText(geneFasta(last.genes[selGene],selGene),e.target);});
+$("copyAllFasta").addEventListener("click",e=>{if(last)copyText(last.genes.map(geneFasta).join("\n"),e.target);});
+$("copyAA").addEventListener("click",e=>{if(last)copyText("Amino acid,Short,Type,Count,Percent,Average percent,Ratio\n"+last.rows.map(r=>[AA[r.a][0],SHORT[r.a],AA[r.a][2],r.count,r.pct.toFixed(3),AA[r.a][1],r.ratio.toFixed(3)].join(",")).join("\n"),e.target);});
+$("copyCodons").addEventListener("click",e=>{if(last){const {c,n}=last.codons;copyText("Codon,Amino acid,Count,Percent\n"+Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([cd,v])=>[cd,SHORT[CODE[cd]],v,(v/n*100).toFixed(3)].join(",")).join("\n"),e.target);}});
+$("translate").addEventListener("click",translate);
+
+current={recs:[{name:SAMPLE.name,seq:SAMPLE.seq}],label:"sample virus (GCF_000907355.1)"};
+run();translate();
+</script>
+
+</body>
+</html>
