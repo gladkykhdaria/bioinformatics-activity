@@ -1,0 +1,8 @@
+make an app/algotithm
+
+
+using the same genome as the last lab
+
+take 20 thousand samples form it, having random wind which takes a samples btw 100-150 nucleotypes , hoppint that whole collection of 20th covers the entire area of the genome.
+
+wuse this 20 th to make an original genome. so we take sample by smaple and see what we have in comon, and by that we can find oit

@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Genome Assembly Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;600&family=Source+Sans+3:wght@400;600;700&family=Roboto+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column. Settings card, result banner + stats, then figures top to bottom in the order the algorithm runs: reads → coverage → overlaps → contigs → check → theory. Light only, blue/white/green. */
+:root{
+  --bg:#f7f9fc; --white:#ffffff; --ink:#1b2a3a; --muted:#5b6b7d; --line:#dde4ee; --soft:#eef3fa;
+  --blue:#1f5fbf; --blue-soft:#e6eefb; --green:#1e8a4c; --green-soft:#e5f4ea; --gap:#b4441f;
+  --f-head:"Lexend",system-ui,sans-serif;
+  --f-body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"Roboto Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 var(--f-body)}
+.wrap{max-width:980px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-direction:column;gap:6px}
+.course{font-size:14px;color:var(--muted)}
+h1{font:600 clamp(28px,5vw,38px)/1.15 var(--f-head);margin:0;color:var(--blue)}
+.lede{margin:0;color:var(--muted);max-width:68ch;font-size:17px}
+h2{font:600 19px/1.3 var(--f-head);margin:0}
+h3{font:600 16px/1.3 var(--f-head);margin:0}
+p{margin:0}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+.card{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:13.5px;color:var(--muted);font-weight:600}
+input[type=number]{font:15px var(--f-mono);color:var(--ink);background:var(--white);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}
+.file{display:flex;align-items:center;gap:10px;border:1px dashed #b9c6d8;border-radius:8px;padding:8px 12px;background:var(--soft);min-width:0;flex:1 1 280px}
+.file input{font:14px var(--f-body);max-width:100%}
+.btns{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+button{font:600 15px var(--f-body);border-radius:8px;padding:9px 16px;cursor:pointer;border:1px solid var(--line);background:var(--white);color:var(--ink)}
+button:hover{border-color:var(--blue);color:var(--blue)}
+button.primary{background:var(--blue);border-color:var(--blue);color:#fff;padding:10px 20px}
+button.primary:hover{background:#184c99;color:#fff}
+button.sm{font-size:13.5px;padding:6px 12px}
+button:focus-visible,input:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.gname{font:13.5px var(--f-mono);color:var(--muted);word-break:break-word}
+.banner{border-radius:10px;padding:16px 20px;display:flex;flex-direction:column;gap:4px}
+.banner.ok{background:var(--green-soft);border:1px solid #bfe2cc}
+.banner.part{background:var(--blue-soft);border:1px solid #c6d6f2}
+.banner b{font:600 22px/1.25 var(--f-head)}
+.banner.ok b{color:var(--green)} .banner.part b{color:var(--blue)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:10px}
+.stats div{background:var(--soft);border-radius:8px;padding:10px 12px}
+.stats b{display:block;font:600 19px var(--f-head);font-variant-numeric:tabular-nums}
+.stats span{font-size:13px;color:var(--muted)}
+canvas{display:block;width:100%}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:14px;color:var(--muted)}
+.dot{display:inline-block;width:12px;height:10px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.axis{display:flex;justify-content:space-between;font:12px var(--f-mono);color:var(--muted)}
+.align{font:13px/1.65 var(--f-mono);background:var(--soft);border-radius:8px;padding:12px 14px;overflow-x:auto;white-space:pre}
+.align .ov{background:var(--green-soft);color:var(--green);font-weight:500}
+.align .nw{background:var(--blue-soft);color:var(--blue);font-weight:500}
+.align .lb{color:var(--muted)}
+.tablewrap{overflow-x:auto;max-height:320px;overflow-y:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{text-align:left;padding:6px 12px;border-bottom:1px solid var(--line)}
+th{font-size:13px;font-weight:600;color:var(--muted);background:var(--soft);position:sticky;top:0}
+td.m{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.cmp{font:13px/1.7 var(--f-mono);background:var(--soft);border-radius:8px;padding:12px 14px;overflow-x:auto;white-space:pre}
+.cmp .x{background:#f8d9cc;color:var(--gap)}
+ol.steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:10px}
+ol.steps li::marker{font:600 16px var(--f-head);color:var(--blue)}
+ol.steps p{color:var(--muted);max-width:72ch}
+code{font:13.5px var(--f-mono);background:var(--soft);padding:1px 5px;border-radius:4px}
+.cs{font-size:14px;color:var(--green)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:720px){.two{grid-template-columns:1fr}}
+footer{font-size:13.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="course">Bioinformatics · FILS, POLITEHNICA Bucharest · Lab 04</div>
+    <h1>Genome Assembly Lab</h1>
+    <p class="lede">Cut a genome into thousands of random short pieces, throw the original away, and rebuild it only from the pieces by finding where they overlap.</p>
+  </header>
+
+  <section class="card" aria-labelledby="set-h">
+    <h2 id="set-h">Settings</h2>
+    <div class="btns">
+      <label class="file" for="file"><input type="file" id="file" accept=".fasta,.fna,.fa,.fas,.txt,.gz"></label>
+      <button id="sample">Use lab virus</button>
+    </div>
+    <div class="gname" id="gname"></div>
+    <div class="form">
+      <label for="nreads">Number of reads<input type="number" id="nreads" value="20000" min="1" max="200000"></label>
+      <label for="minlen">Min read length<input type="number" id="minlen" value="100" min="20"></label>
+      <label for="maxlen">Max read length<input type="number" id="maxlen" value="150" min="20"></label>
+      <label for="overlap">Min overlap<input type="number" id="overlap" value="30" min="21"></label>
+      <label for="seed">Random seed<input type="number" id="seed" value="42"></label>
+    </div>
+    <div class="btns">
+      <button class="primary" id="run">Sample &amp; rebuild</button>
+      <span class="muted small">Try:</span>
+      <button class="sm" data-n="20000">20,000 reads</button>
+      <button class="sm" data-n="200">200 reads</button>
+      <button class="sm" data-n="60">60 reads (gaps)</button>
+      <button class="sm" id="reseed">New random seed</button>
+    </div>
+  </section>
+
+  <div class="banner" id="banner"></div>
+  <div class="stats" id="stats"></div>
+
+  <section class="card" aria-labelledby="reads-h">
+    <div>
+      <h2 id="reads-h">1. Reads on the genome</h2>
+      <p class="muted small" id="readsSub"></p>
+    </div>
+    <canvas id="pile" height="10" aria-label="Reads drawn at their positions on the genome"></canvas>
+    <div class="axis"><span>1</span><span id="axMid"></span><span id="axEnd"></span></div>
+  </section>
+
+  <section class="card" aria-labelledby="cov-h">
+    <div>
+      <h2 id="cov-h">2. Coverage</h2>
+      <p class="muted small">How many reads cover each letter. Anywhere it drops to 0 (red), nothing can rebuild that part.</p>
+    </div>
+    <canvas id="cov" height="10" aria-label="Coverage along the genome"></canvas>
+    <div class="axis"><span>1</span><span id="axMid2"></span><span id="axEnd2"></span></div>
+  </section>
+
+  <section class="card" aria-labelledby="ov-h">
+    <div>
+      <h2 id="ov-h">3. Finding what reads have in common</h2>
+      <p class="muted small">The first steps of the rebuild. The end of the contig (the piece built so far) matches the start of the next read. The shared part is the <span style="color:var(--green);font-weight:600">overlap</span>, and the rest of the read is <span style="color:var(--blue);font-weight:600">new letters</span> that get glued on.</p>
+    </div>
+    <div class="align" id="align"></div>
+    <div class="tablewrap"><table id="steps"></table></div>
+  </section>
+
+  <section class="card" aria-labelledby="ctg-h">
+    <div>
+      <h2 id="ctg-h">4. Contigs</h2>
+      <p class="muted small" id="ctgSub"></p>
+    </div>
+    <canvas id="ctg" height="10" aria-label="Rebuilt contigs placed on the original genome"></canvas>
+    <div class="legend"><span><i class="dot" style="background:var(--line)"></i>original genome</span><span><i class="dot" style="background:var(--blue)"></i>rebuilt contigs</span><span><i class="dot" style="background:var(--gap)"></i>never read</span></div>
+  </section>
+
+  <section class="card" aria-labelledby="chk-h">
+    <div class="btns" style="justify-content:space-between">
+      <h2 id="chk-h">5. Check against the original</h2>
+      <button class="sm" id="copy">Copy rebuilt genome (FASTA)</button>
+    </div>
+    <div class="cmp" id="cmp"></div>
+  </section>
+
+  <section class="card" aria-labelledby="th-h">
+    <div>
+      <h2 id="th-h">6. How many reads do you really need?</h2>
+      <p class="muted small">The Lander–Waterman formula predicts how many letters stay unread: <code>G × e<sup>−c</sup></code>, where G is the genome length and c = reads × average length ÷ G is the coverage.</p>
+    </div>
+    <div class="two">
+      <canvas id="lw" height="10" aria-label="Expected unread letters versus number of reads"></canvas>
+      <div class="tablewrap" style="max-height:none"><table id="lwt"></table></div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="how-h">
+    <h2 id="how-h">How it works, in simple words</h2>
+    <ol class="steps">
+      <li><h3>Sample the reads</h3><p>A window of random length (100–150) lands at a random spot and copies the letters inside. 20,000 times. A real sequencer does the same: it can only read short pieces from random places.</p><span class="cs">CS: random sampling</span></li>
+      <li><h3>Throw away duplicates</h3><p>Identical reads add nothing new, so only one copy is kept.</p><span class="cs">CS: set</span></li>
+      <li><h3>Index the reads</h3><p>Each read is filed under its first 20 letters. To find "which read starts with these letters" the app looks it up directly instead of comparing all 20,000 reads with each other (that would be 400 million comparisons).</p><span class="cs">CS: hash table</span></li>
+      <li><h3>Grow a contig</h3><p>Start from the longest read. Look at the last letters of the contig and find reads whose beginning is exactly the same for at least 30 letters. Glue on the one that adds the most new letters. Repeat until nothing matches, then do the same to the left.</p><span class="cs">CS: greedy algorithm, suffix = prefix matching</span></li>
+      <li><h3>Handle gaps</h3><p>If a part was never read, growth stops there. The app starts a new contig from an unused read, so low coverage gives several pieces instead of one.</p><span class="cs">CS: repeat until every read is used</span></li>
+      <li><h3>Check</h3><p>Compare the rebuilt genome with the original, letter by letter.</p><span class="cs">CS: string comparison</span></li>
+    </ol>
+    <p class="muted small">Why 30 letters of overlap is safe here: the longest piece that repeats inside this virus is only 12 letters, so a 30-letter overlap can only fit in one place. In genomes with long repeats (like the human genome) this simple method gets confused.</p>
+  </section>
+
+  <footer>Reads are simulated from one strand, without sequencing errors. Everything runs in your browser.</footer>
+</div>
+
+<script>
+const SAMPLE={name:"NC_021202.1 Ageratum Yellow vein China virus - OX1, complete genome",seq:"ACCGGATGGCCGCGATTTTTTTTAAAGTGGTCACCACCACTAACAAATGTCCTCCACTAAAAACGCTCCCTCAAAGCTTATTTAATTCAAATCCATTATAAATACTTGGTCCCCAAGTATTAAAGCTAAACATGTGGGATCCTCTTTTGAACGAGTTTCCCGAAACCGTACACGGGTTTAGGTGTATGTTAGCCATTAAGTATTTGCAATTAGTTGAAAATACATACTCTCCTGATACATTAGGGTACGATTTGCTTCGTGATTTAATTTCAGTTATTCGTGCTAGAGATTATGTCGAAGCGTCCCGCCGATATAGTCATTTCCACTCCCGCATCCAAGGTGCGTCGCCGTCTGAACTTCGACAGCCCGTATGTCAGCCGTGCTGCTGCCCCCACTGTCCTCGTCACAAACAAAAGGAGGTCATGGGTGAATCGGCCCATGTACCGAAAGCCCAGGATGTACAGGATGTATAGAAGCCCTGATGTTCCTAAGGGTTGTGAAGGCCCGTGTAAGGTGCAGTCCTATGAGGCCCGTCATGATGTGTCCCATACTGGTAAGGTCATATGTGTCACGGATGTTACACGTGGTAATGGTATTACCCATCGAGTTGGTAAGAGGTTTTGTGTGAAATCCATCTACGTCATTGGGAAGATATGGATGGATGAAAATATTAAATTGAAGAATCACACCAATACAGTTATGTTTTTTCTAGTTAGAGATCGGCGTCCGAGTGGTACTCCGATGGATTTCCAGCAGGTTTTTAATTGTTATGACAATGAGCCAAGCACTGGTACTGTGAAGAATGATCTCAGGGATAGGTTTCAAGTCATTCGGAAGTTCAACTATATGGTTACTGGTGGGCAGTATGCGTCTAAAGAACAGGCATTGGTGAAGAAGTTCATGCGGGTTAATACCCATGTTGTTTACAACCATCAAGAACAGGCAAAGTATGAGAATCATACGGAGAATGCATTATTGTTGTATATGGTTTCTACTCATGCTAGTAATCCTGTATATGCGACTTTGAAAGTCCGCATCTATTTCTATGATTCACAAATGAATTAATAAATATTGAATTTTATTATATTTGAATGTCTTACATATTCTGTGTTTTCCAATACATCCCATAATACATGATTACATGCTCTAATTACATTATTAATACTAATTACACCCAAATTATCTAAATATTTCATACATTGAACCCTAAATACTCTTAAGAAACGCCAAGTCTGAGGTTGTAAGCGAGTCCAGATCTGGAAGATCAGAAAACACTGGTGTATTCCCAACGCTTTCCTCAGGTTGTGGTTGAATTGTATTTGGATCGTTATGATGTCGTGGTTGGTGTTGAATGGTCTCTCGTGGTGCTTGGTTATCTTGAAATATAGGGGATTTTTGATTGTCCAGGTATACACGCCACTCTCGCATTGAGTTGCAGTGAGTAATTCCCCTGTGCGAAAATCCATGATTTGCACAATCTATGCCGAAGTAGTATGAGCACCCGCACGTTAGATCAACTCTCCGTCTCCGAATGGGCTTCCTCTTGGATATTCTGTGTTGCACTTTGATTGGCACCTGAGTACAATGCGCTGTTGAGGGTGATGAATTCTGCATTCTTTAATGCCCAATCTTTTAAAGCTGAATTTTTATCCTCATTCAAGTACTCTTTATATGATGATGTTGGGCCTGGATTGCAAAGGAAGATAGTTGGGATTCCACCTTTAATTTGAATTGGTTTCCCGTACTTAGTGTTGCTTTGCCAGTCCCTTTGGGCCCCCATGAATTCTTTAAAGTGCTTTAGATAATGGGGGTCTACGTCATCAATGACGTTATACCAAGCATCATTACTGTATACCTTTGGGCTTAGATCAAGATGTCCACACAAATAATTGTGTGGTCCCAGTGATCTGGCCCACATTGTTTTACCTGTACGACTATCACCTTCTATCACAATACTTTTGGGTCTCCAAGGCCGCGCAGCGGCACCACTCACATTTTCAGAAACCCACTCTTCAAGTTCTTCTGGAACTTGATCGAATGAAGAAGAAAGAAATGGACAAACAAAAACCTCTAAAGGAGGTGCAAAAATCCTATCTAAGTTAGAGTTTAAATTATGAAATTGTAAAACATAATCTTTAGGAGCTAACTCCTTAATTACTCTAAGAGCCTCAGACTTACTGCCGCTGTTAATTGCCTGGGCGTAAGCGTCATTGGCTGTCTGTTGTCCCCCTCTTGCAGAGCGTCCGTCGATCTGAAATTCTCCCCATTCGAGGGTGTCTCCGTCCTTCTCCAGGTAGGACTTGACGTCGGAGCTGGATTTAGCTCCCTGAATGTTCGGATGGAAATGTGCTGACCTGGTTGGGGAGACCAGGTCGAAGAATCTGTTATTTTGGCATTTGTATTTGCCTTCGAATTGGATAAGCACGTGGAGATGAGGGCTCCCATCTTCATGAAGTTCGCTGCAGATTTTGATGTATTTTTTATTTGTTGGGGTGTTTAGGTTTTTTATTTGGGAAAGTGCCTCTTCTTTAGTAAGAGAGCATTGTGGATAAGTGAGGAAAAAGTTTTTGGCATATATTTGAAAACGCTTAGGAGGAGCCATTGACTTGGTCAATCGGTACTCAACAAACTTGGCTATGCAATCGGTGATTGGTACTCAATATATAGTGAGTACCAAATGGCATGATTGTAATTTCTTAAAGAAATTCAAATTCCAATCGCGGCCATCCGTATAATATT"};
+const K=20;
+const $=id=>document.getElementById(id);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let genome=SAMPLE,last=null;
+
+function rng(seed){let a=seed>>>0;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+function sample(g,n,mn,mx,seed){
+  const r=rng(seed),reads=new Array(n),pos=new Array(n);
+  for(let i=0;i<n;i++){const len=mn+Math.floor(r()*(mx-mn+1)),st=Math.floor(r()*(g.length-len+1));reads[i]=g.substr(st,len);pos[i]=[st,len];}
+  return {reads,pos};
+}
+function coverage(G,pos){
+  const d=new Int32Array(G+1);for(const [s,l] of pos){d[s]++;d[s+l]--;}
+  const c=new Int32Array(G);let run=0;for(let i=0;i<G;i++){run+=d[i];c[i]=run;}return c;
+}
+function buildIndex(reads){const m=new Map();reads.forEach((r,i)=>{const k=r.slice(0,K);const a=m.get(k);a?a.push(i):m.set(k,[i]);});return m;}
+function extend(contig,reads,index,minOv,maxLen,log){
+  for(;;){
+    let bestGain=0,bestRead=null,bestOv=0;
+    const L=contig.length;
+    for(let p=Math.max(0,L-maxLen+1);p<=L-minOv;p++){
+      const cand=index.get(contig.substr(p,K));if(!cand)continue;
+      const tail=contig.slice(p);
+      for(const i of cand){const r=reads[i],gain=r.length-tail.length;if(gain>bestGain&&r.startsWith(tail)){bestGain=gain;bestRead=r;bestOv=tail.length;}}
+    }
+    if(!bestRead)return contig;
+    if(log)log.push({tail:contig.slice(-bestOv-40),ov:bestOv,read:bestRead,gain:bestGain,len:L+bestGain,dir:log.curDir||"right"});
+    contig+=bestRead.slice(bestOv);
+  }
+}
+const rev=s=>s.split("").reverse().join("");
+function assemble(reads,minOv,maxLen){
+  const uniq=[...new Set(reads)].sort((a,b)=>b.length-a.length);
+  const ri=buildIndex(uniq),rr=uniq.map(rev),li=buildIndex(rr);
+  const log=[],contigs=[];let remaining=uniq;
+  while(remaining.length&&contigs.length<300){
+    const lg=contigs.length?null:log;
+    if(lg)lg.curDir="right";
+    let c=extend(remaining[0],uniq,ri,minOv,maxLen,lg);
+    if(lg)lg.curDir="left";
+    c=rev(extend(rev(c),rr,li,minOv,maxLen,lg));
+    contigs.push(c);
+    remaining=remaining.filter(r=>!c.includes(r));
+  }
+  contigs.sort((a,b)=>b.length-a.length);
+  return {contigs,unique:uniq.length,log,capped:remaining.length>0};
+}
+
+function setupCanvas(cv,h){
+  const dpr=window.devicePixelRatio||1,w=cv.clientWidth;
+  cv.style.height=h+"px";cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);
+  const ctx=cv.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);return [ctx,w,h];
+}
+
+function drawPile(res){
+  const G=res.G,show=Math.min(res.pos.length,400);
+  const items=res.pos.slice(0,show).map(([s,l])=>[s,s+l]).sort((a,b)=>a[0]-b[0]);
+  const rowsEnd=[],rows=[];const gapPx=G*0.004;
+  for(const it of items){let r=rowsEnd.findIndex(e=>e+gapPx<it[0]);if(r<0){r=rowsEnd.length;rowsEnd.push(0);}rowsEnd[r]=it[1];rows.push([r,it]);}
+  const rowH=4,top=16,h=Math.min(top+rowsEnd.length*rowH+4,420);
+  const [ctx,w]=setupCanvas($("pile"),h);
+  ctx.fillStyle=css("--ink");ctx.fillRect(0,4,w,6);
+  ctx.fillStyle=css("--blue");
+  for(const [r,[a,b]] of rows){const y=top+r*rowH;if(y>h-3)continue;ctx.fillRect(a/G*w,y,Math.max(1,(b-a)/G*w),2.5);}
+  $("readsSub").textContent=`Black bar = the genome. Each blue line = one read at the place it was copied from. Showing ${show.toLocaleString()} of ${res.pos.length.toLocaleString()} reads, otherwise it would be a solid block.`;
+}
+
+function drawCov(res){
+  const c=res.cov,G=res.G,[ctx,w,h]=setupCanvas($("cov"),180),pad=22,max=Math.max(1,...c),mean=res.mean;
+  const y=v=>h-pad-(v/max)*(h-pad-22);
+  ctx.strokeStyle=css("--line");ctx.lineWidth=1;
+  for(const v of [0,max/2,max]){ctx.beginPath();ctx.moveTo(0,y(v));ctx.lineTo(w,y(v));ctx.stroke();}
+  ctx.beginPath();ctx.moveTo(0,y(0));
+  for(let px=0;px<w;px++){const i=Math.min(G-1,Math.floor(px/w*G));ctx.lineTo(px,y(c[i]));}
+  ctx.lineTo(w,y(0));ctx.closePath();ctx.fillStyle=css("--blue-soft");ctx.fill();
+  ctx.beginPath();for(let px=0;px<w;px++){const i=Math.min(G-1,Math.floor(px/w*G));px?ctx.lineTo(px,y(c[i])):ctx.moveTo(px,y(c[i]));}
+  ctx.strokeStyle=css("--blue");ctx.lineWidth=1.5;ctx.stroke();
+  ctx.setLineDash([5,4]);ctx.strokeStyle=css("--green");ctx.beginPath();ctx.moveTo(0,y(mean));ctx.lineTo(w,y(mean));ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle=css("--gap");
+  for(let i=0;i<G;i++)if(c[i]===0)ctx.fillRect(i/G*w,h-pad-2,Math.max(1,w/G),6);
+  ctx.font="12px "+css("--f-mono");ctx.fillStyle=css("--muted");
+  ctx.fillText(`max ${max}×`,6,y(max)-4);
+  ctx.fillStyle=css("--green");const mt=`mean ${Math.round(mean)}×`;ctx.fillText(mt,w-ctx.measureText(mt).width-6,y(mean)-6);
+}
+
+function drawContigs(res){
+  const G=res.G,[ctx,w,h]=setupCanvas($("ctg"),34);
+  ctx.fillStyle=css("--line");ctx.fillRect(0,4,w,10);
+  ctx.fillStyle=css("--gap");
+  for(let i=0;i<G;i++)if(res.cov[i]===0)ctx.fillRect(i/G*w,4,Math.max(1,w/G),10);
+  ctx.fillStyle=css("--blue");
+  res.contigs.forEach((c,i)=>{const p=res.places[i];if(p<0)return;ctx.fillRect(p/G*w,18,Math.max(1.5,c.length/G*w-1),12);});
+}
+
+function drawLW(res){
+  const G=res.G,avg=res.avg,[ctx,w,h]=setupCanvas($("lw"),200),padL=44,padB=24;
+  const nMax=Math.max(60,Math.ceil(G*12/avg));
+  const miss=n=>G*Math.exp(-n*avg/G);
+  const yLog=v=>{const lv=Math.log10(Math.max(v,0.01)),top=Math.log10(G);return 8+(top-lv)/(top+2)*(h-padB-8);};
+  const x=n=>padL+n/nMax*(w-padL-8);
+  ctx.font="11px "+css("--f-mono");ctx.fillStyle=css("--muted");ctx.strokeStyle=css("--line");
+  for(const v of [G,G/10,G/100,1,0.1,0.01].filter(v=>v>=0.01)){const yy=yLog(v);ctx.beginPath();ctx.moveTo(padL,yy);ctx.lineTo(w-8,yy);ctx.stroke();ctx.fillText(v>=1?Math.round(v).toLocaleString():String(v),2,yy+4);}
+  ctx.beginPath();for(let i=0;i<=200;i++){const n=i/200*nMax;i?ctx.lineTo(x(n),yLog(miss(n))):ctx.moveTo(x(n),yLog(miss(n)));}
+  ctx.strokeStyle=css("--blue");ctx.lineWidth=2;ctx.stroke();ctx.lineWidth=1;
+  ctx.fillStyle=css("--muted");ctx.fillText("0",padL,h-6);const lab=`${nMax.toLocaleString()} reads`;ctx.fillText(lab,w-8-ctx.measureText(lab).width,h-6);
+  ctx.fillText("letters missed (log)",padL+4,16);
+  const n=res.n;if(n<=nMax){ctx.fillStyle=css("--green");ctx.beginPath();ctx.arc(x(n),yLog(miss(n)),5,0,7);ctx.fill();ctx.fillText(`you: ${n}`,Math.min(x(n)+8,w-70),yLog(miss(n))-8);}
+  else{ctx.fillStyle=css("--green");const t=`you: ${n.toLocaleString()} reads (off the chart, ~0 missed)`;ctx.fillText(t,w-8-ctx.measureText(t).width,34);}
+  const rows=[10,50,100,200,500,1000,5000,20000].map(k=>{const c=k*avg/G;return `<tr><td class="m">${k.toLocaleString()}</td><td class="m">${c.toFixed(1)}×</td><td class="m">${miss(k)<0.01?"≈ 0":miss(k)<10?miss(k).toFixed(2):Math.round(miss(k)).toLocaleString()}</td></tr>`;}).join("");
+  $("lwt").innerHTML=`<tr><th>Reads</th><th>Coverage</th><th>Letters missed</th></tr>${rows}`;
+}
+
+function renderAlign(log){
+  if(!log.length){$("align").textContent="No overlaps found. Coverage is too low or the minimum overlap is too long.";$("steps").innerHTML="";return;}
+  $("align").innerHTML=log.filter(s=>s.dir==="right").slice(0,3).map((s,i)=>{
+    const pre=s.tail.length-s.ov,ovPart=s.read.slice(0,s.ov),nw=s.read.slice(s.ov);
+    const c=`<span class="lb">contig  </span>…${s.tail.slice(0,pre)}<span class="ov">${s.tail.slice(pre)}</span>`;
+    const r=`<span class="lb">read    </span> ${" ".repeat(pre)}<span class="ov">${ovPart}</span><span class="nw">${nw}</span>`;
+    return `<span class="lb">Step ${i+1}: overlap ${s.ov} letters, +${s.gain} new → contig ${s.len.toLocaleString()} nt</span>\n${c}\n${r}`;
+  }).join("\n\n");
+  $("steps").innerHTML="<tr><th>Step</th><th>Direction</th><th>Overlap</th><th>New letters</th><th>Contig length</th></tr>"+log.map((s,i)=>`<tr><td class="m">${i+1}</td><td>${s.dir==="right"?"→ right":"← left"}</td><td class="m">${s.ov} nt</td><td class="m">+${s.gain} nt</td><td class="m">${s.len.toLocaleString()} nt</td></tr>`).join("");
+}
+
+function renderCompare(g,best,place){
+  const n=60;
+  if(best===g){$("cmp").innerHTML=`<span class="lb">original</span>  ${g.slice(0,n)}…${g.slice(-20)}\n<span class="lb">rebuilt </span>  ${best.slice(0,n)}…${best.slice(-20)}\n\n<span style="color:var(--green)">All ${g.length.toLocaleString()} letters identical.</span>`;return;}
+  const o=g.slice(place,place+n),b=best.slice(0,n);
+  const marked=[...b].map((ch,i)=>ch===o[i]?ch:`<span class="x">${ch}</span>`).join("");
+  $("cmp").innerHTML=`<span class="lb">original from position ${(place+1).toLocaleString()}</span>\n${o}…\n<span class="lb">longest rebuilt contig (${best.length.toLocaleString()} nt)</span>\n${marked}…\n\n<span style="color:var(--blue)">This contig matches the original exactly, but it covers only ${(best.length/g.length*100).toFixed(1)}% of it. The rest is in other contigs or was never read.</span>`;
+}
+
+function run(){
+  const g=genome.seq,G=g.length;
+  let n=Math.max(1,+$("nreads").value||1),mn=Math.max(20,+$("minlen").value||100),mx=Math.max(mn,+$("maxlen").value||150);
+  mx=Math.min(mx,G);mn=Math.min(mn,mx);
+  const minOv=Math.max(K+1,Math.min(+$("overlap").value||30,mn-1)),seed=+$("seed").value||0;
+  const t0=performance.now();
+  const {reads,pos}=sample(g,n,mn,mx,seed);
+  const cov=coverage(G,pos);
+  const {contigs,unique,log,capped}=assemble(reads,minOv,mx);
+  const ms=performance.now()-t0;
+  const avg=reads.reduce((a,r)=>a+r.length,0)/n;
+  let minC=Infinity,sum=0,zero=0;for(const v of cov){if(v<minC)minC=v;sum+=v;if(!v)zero++;}
+  const places=contigs.map(c=>g.indexOf(c));
+  const best=contigs[0],perfect=best===g;
+  last={G,n,avg,pos,cov,mean:sum/G,contigs,places,g};
+
+  const b=$("banner");
+  b.className="banner "+(perfect?"ok":"part");
+  b.innerHTML=perfect
+    ?`<b>✓ Rebuilt ${G.toLocaleString()} of ${G.toLocaleString()} letters: 100% identical</b><span class="muted">From ${n.toLocaleString()} random reads, in ${ms<1000?Math.round(ms)+" ms":(ms/1000).toFixed(1)+" s"}. One contig, no gaps, no mistakes.</span>`
+    :`<b>${contigs.length}${capped?"+":""} pieces · longest covers ${(best.length/G*100).toFixed(1)}% of the genome</b><span class="muted">${zero?`${zero.toLocaleString()} letters were never read, so the genome can't be joined into one piece.`:"Every letter was read, but some overlaps were shorter than the minimum, so pieces couldn't be joined. Lower the min overlap or add reads."}</span>`;
+
+  $("stats").innerHTML=[
+    [n.toLocaleString(),"reads taken"],[avg.toFixed(1)+" nt","average read length"],
+    [Math.round(n*avg/G)+"×","expected coverage"],[`${minC}× / ${Math.round(sum/G)}×`,"min / mean coverage"],
+    [zero.toLocaleString(),"letters never read"],[unique.toLocaleString(),"unique reads"],
+    [contigs.length+(capped?"+":""),"contigs"],[log.length,"extension steps"]
+  ].map(([v,l])=>`<div><b>${v}</b><span>${l}</span></div>`).join("");
+
+  $("ctgSub").textContent=perfect?"One contig that spans the whole genome."
+    :`${contigs.length}${capped?"+ (showing first 300)":""} contigs. Lengths: ${contigs.slice(0,12).map(c=>c.length.toLocaleString()).join(", ")}${contigs.length>12?" …":""} nt. They're placed where they belong, which we only know because we kept the original for checking.`;
+  $("axMid").textContent=$("axMid2").textContent=Math.round(G/2).toLocaleString();
+  $("axEnd").textContent=$("axEnd2").textContent=G.toLocaleString()+" nt";
+  drawPile(last);drawCov(last);drawContigs(last);drawLW(last);
+  renderAlign(log);renderCompare(g,best,places[0]);
+}
+
+function parseFasta(text){
+  let name="",parts=[],started=false;
+  for(const raw of text.split(/\r?\n/)){const l=raw.trim();if(!l)continue;if(l[0]===">"){if(started)break;name=l.slice(1);started=true;}else{started=true;parts.push(l.toUpperCase());}}
+  return {name,seq:parts.join("").replace(/U/g,"T").replace(/[^ACGT]/g,"")};
+}
+async function readFile(file){
+  const head=new Uint8Array(await file.slice(0,2).arrayBuffer());
+  if(head[0]===0x1f&&head[1]===0x8b)return await new Response(file.stream().pipeThrough(new DecompressionStream("gzip"))).text();
+  return await file.text();
+}
+async function loadFile(f){
+  try{const r=parseFasta(await readFile(f));if(r.seq.length<200)throw new Error("Sequence too short or not a FASTA file.");genome=r;showName();run();}
+  catch(e){$("gname").textContent="Couldn't read the file: "+e.message;}
+}
+function showName(){$("gname").textContent=`${genome.name||"(unnamed)"} · ${genome.seq.length.toLocaleString()} nt`;}
+
+$("file").addEventListener("change",e=>{if(e.target.files[0])loadFile(e.target.files[0]);});
+$("sample").addEventListener("click",()=>{genome=SAMPLE;showName();run();});
+$("run").addEventListener("click",run);
+$("reseed").addEventListener("click",()=>{$("seed").value=Math.floor(Math.random()*100000);run();});
+document.querySelectorAll("[data-n]").forEach(b=>b.addEventListener("click",()=>{$("nreads").value=b.dataset.n;run();}));
+$("copy").addEventListener("click",e=>{
+  if(!last)return;const btn=e.target,txt=last.contigs.map((c,i)=>`>contig_${i+1} length=${c.length}\n${c.match(/.{1,70}/g).join("\n")}`).join("\n");
+  const done=()=>{btn.textContent="Copied";setTimeout(()=>btn.textContent="Copy rebuilt genome (FASTA)",1200);};
+  try{navigator.clipboard.writeText(txt).then(done,()=>{});}catch(err){}
+});
+let rt;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{if(last){drawPile(last);drawCov(last);drawContigs(last);drawLW(last);}},150);});
+showName();run();
+</script>
+
+</body>
+</html>
