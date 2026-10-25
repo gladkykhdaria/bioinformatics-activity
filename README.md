@@ -22,6 +22,14 @@ This repository contains my lab activities from the bioinformatics course. Each 
 - Shows the most common codons in a genome.
 - Includes an HTML tool for exploring viral genomes and their genetic information.
 
+
+Lab 04 – Genome Assembly
+
+* Takes 20,000 random reads (100–150 nt) from a viral genome.
+* Rebuilds the genome by finding overlaps between reads.
+* Checks coverage and shows what happens when there are gaps.
+* Compares the rebuilt genome with the original (100% match).
+* Includes an HTML tool with charts for reads, coverage and contigs.
 ---
 
 **Language:** Python, HTML
