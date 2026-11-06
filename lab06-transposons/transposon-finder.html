@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transposon Finder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;600&family=Source+Sans+3:wght@400;600;700&family=Roboto+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column. Make-a-sequence card, result banner, map of the sequence, table with start/end, close-ups, colored sequence, accuracy test; plus a "How it works" tab. Light only, blue/white/green. */
+:root{
+  --bg:#f7f9fc; --white:#ffffff; --ink:#1b2a3a; --muted:#5b6b7d; --line:#dde4ee; --soft:#eef3fa;
+  --blue:#1f5fbf; --blue-soft:#e6eefb; --green:#1e8a4c; --green-soft:#e5f4ea;
+  --ir:#1f5fbf; --core:#c9dbf6; --tsd:#1e8a4c; --host:#dde4ee; --miss:#b4441f;
+  --f-head:"Lexend",system-ui,sans-serif;
+  --f-body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"Roboto Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 var(--f-body)}
+.wrap{max-width:980px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-direction:column;gap:6px}
+.course{font-size:14px;color:var(--muted)}
+h1{font:600 clamp(28px,5vw,38px)/1.15 var(--f-head);margin:0;color:var(--blue)}
+.lede{margin:0;color:var(--muted);max-width:68ch;font-size:17px}
+h2{font:600 19px/1.3 var(--f-head);margin:0}
+h3{font:600 16px/1.3 var(--f-head);margin:0}
+p{margin:0}
+.muted{color:var(--muted)} .small{font-size:14px}
+.card{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:13.5px;color:var(--muted);font-weight:600}
+input[type=number],select{font:15px var(--f-mono);color:var(--ink);background:var(--white);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}
+textarea{font:13.5px var(--f-mono);color:var(--ink);background:var(--white);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-height:90px;resize:vertical;word-break:break-all}
+.btns{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+button{font:600 15px var(--f-body);border-radius:8px;padding:9px 16px;cursor:pointer;border:1px solid var(--line);background:var(--white);color:var(--ink)}
+button:hover{border-color:var(--blue);color:var(--blue)}
+button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+button.primary:hover{background:#184c99;color:#fff}
+button.sm{font-size:13.5px;padding:6px 12px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[role=tab]:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);overflow-x:auto}
+.tabs button{border:none;border-radius:8px 8px 0 0;background:none;padding:10px 14px;font-size:15px;color:var(--muted);margin-bottom:-2px;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--blue);border-bottom-color:var(--blue)}
+details summary{cursor:pointer;font-weight:600;color:var(--blue)}
+details[open] summary{margin-bottom:10px}
+.banner{border-radius:10px;padding:16px 20px;display:flex;flex-direction:column;gap:4px}
+.banner.ok{background:var(--green-soft);border:1px solid #bfe2cc}
+.banner.part{background:var(--blue-soft);border:1px solid #c6d6f2}
+.banner b{font:600 21px/1.25 var(--f-head)}
+.banner.ok b{color:var(--green)} .banner.part b{color:var(--blue)}
+canvas{display:block;width:100%}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:14px;color:var(--muted)}
+.dot{display:inline-block;width:12px;height:10px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{text-align:left;padding:7px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:13px;font-weight:600;color:var(--muted);background:var(--soft)}
+td.m{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.ok-t{color:var(--green);font-weight:600} .bad-t{color:var(--miss);font-weight:600}
+.close{font:13.5px/1.75 var(--f-mono);background:var(--soft);border-radius:8px;padding:12px 14px;overflow-x:auto;white-space:pre}
+.close .t{background:var(--green);color:#fff;border-radius:2px}
+.close .i{background:var(--ir);color:#fff;border-radius:2px}
+.close .c{color:var(--muted)}
+.close .lb{color:var(--muted)}
+.seq{font:13px/2 var(--f-mono);background:var(--soft);border-radius:8px;padding:12px 14px;white-space:pre-wrap;word-break:break-all;overflow-x:auto}
+.seq .pos{color:#9aa9bb;user-select:none}
+.seq .t{background:var(--tsd);color:#fff}
+.seq .i{background:var(--ir);color:#fff}
+.seq .c{background:var(--core)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.stats div{background:var(--soft);border-radius:8px;padding:10px 12px}
+.stats b{display:block;font:600 19px var(--f-head);font-variant-numeric:tabular-nums}
+.stats span{font-size:13px;color:var(--muted)}
+.diagram{font:13.5px/1.7 var(--f-mono);background:var(--soft);border-radius:8px;padding:14px 16px;overflow-x:auto;white-space:pre}
+.diagram .t{color:var(--green);font-weight:600} .diagram .i{color:var(--blue);font-weight:600} .diagram .lb{color:var(--muted)}
+ol.steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:10px}
+ol.steps li::marker{font:600 16px var(--f-head);color:var(--blue)}
+ol.steps p{color:var(--muted);max-width:72ch}
+code{font:13.5px var(--f-mono);background:var(--soft);padding:1px 5px;border-radius:4px}
+.cs{font-size:14px;color:var(--green)}
+footer{font-size:13.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="course">Bioinformatics · FILS, POLITEHNICA Bucharest · Lab 06</div>
+    <h1>Transposon Finder</h1>
+    <p class="lede">Build an artificial DNA sequence with 3–4 jumping genes (transposons) inserted the way a cell does it, then find where each one starts and ends using only the sequence.</p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" id="t-lab" aria-controls="p-lab" aria-selected="true">Lab</button>
+    <button role="tab" id="t-how" aria-controls="p-how" aria-selected="false">How it works</button>
+  </nav>
+
+  <div id="p-lab" role="tabpanel" aria-labelledby="t-lab" style="display:flex;flex-direction:column;gap:18px">
+    <section class="card" aria-labelledby="mk-h">
+      <h2 id="mk-h">1. Make the sequence</h2>
+      <div class="form">
+        <label for="count">Transposons<select id="count"><option>3</option><option selected>4</option></select></label>
+        <label for="tsd">Direct repeat length<input type="number" id="tsd" value="5" min="4" max="9"></label>
+        <label for="seed">Random seed<input type="number" id="seed" value="6"></label>
+      </div>
+      <div class="btns">
+        <button class="primary" id="make">Make sequence &amp; detect</button>
+        <button class="sm" id="reseed">New random seed</button>
+      </div>
+      <details>
+        <summary>Or paste your own sequence</summary>
+        <label for="own" class="muted small">DNA (A, C, G, T). FASTA header lines are ignored.</label>
+        <textarea id="own" spellcheck="false" placeholder="ACGT..."></textarea>
+        <div class="btns" style="margin-top:8px"><button id="detectOwn">Detect in this sequence</button></div>
+      </details>
+    </section>
+
+    <div class="banner" id="banner"></div>
+
+    <section class="card" aria-labelledby="map-h">
+      <div>
+        <h2 id="map-h">2. Map</h2>
+        <p class="muted small" id="mapSub"></p>
+      </div>
+      <canvas id="map" aria-label="Map of the sequence with transposons"></canvas>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--host)"></i>host DNA</span>
+        <span><i class="dot" style="background:var(--tsd)"></i>direct repeat</span>
+        <span><i class="dot" style="background:var(--ir)"></i>inverted repeat</span>
+        <span><i class="dot" style="background:var(--core)"></i>transposon middle</span>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="res-h">
+      <div class="btns" style="justify-content:space-between">
+        <h2 id="res-h">3. Detected positions</h2>
+        <button class="sm" id="copy">Copy table</button>
+      </div>
+      <div class="tablewrap"><table id="tab"></table></div>
+      <h3>Close-up of each one</h3>
+      <div class="close" id="close"></div>
+    </section>
+
+    <section class="card" aria-labelledby="seq-h">
+      <h2 id="seq-h">4. The sequence</h2>
+      <p class="muted small">Coloured from what the detector found, not from the answer key.</p>
+      <div class="seq" id="seqview"></div>
+    </section>
+
+    <section class="card" aria-labelledby="acc-h">
+      <div>
+        <h2 id="acc-h">5. How reliable is it?</h2>
+        <p class="muted small">Make 1,000 new random sequences, run the detector on each, and count how often it gets the exact start and end.</p>
+      </div>
+      <div class="btns"><button id="test">Run 1,000 tests</button><span class="muted small" id="testStatus"></span></div>
+      <div class="stats" id="testStats"></div>
+    </section>
+  </div>
+
+  <section class="card" role="tabpanel" id="p-how" aria-labelledby="t-how" hidden>
+    <h2>What a transposon is</h2>
+    <p class="muted" style="max-width:72ch">A piece of DNA that can cut itself out and jump to another place in the genome. A transposase enzyme recognises its two ends, which are inverted repeats: the right end is the left end read backwards on the other strand.</p>
+    <h2 style="margin-top:6px">How it gets inserted (the board picture)</h2>
+    <div class="diagram"><span class="lb">1. Host DNA, the target site is cut on both strands, a few bases apart</span>
+   ...TAG <span class="t">ATGCA</span> CAG...
+   ...ATC <span class="t">TACGT</span> GTC...
+
+<span class="lb">2. Transposon goes into the cut, leaving single-stranded gaps</span>
+   ...TAG <span class="t">ATGCA</span> [<span class="i">IR</span> transposon <span class="i">IR</span>]       CAG...
+   ...ATC       [<span class="i">IR</span> transposon <span class="i">IR</span>] <span class="t">TACGT</span> GTC...
+
+<span class="lb">3. The cell fills in the gaps, so the target site is now on both sides</span>
+   ...TAG <span class="t">ATGCA</span> [<span class="i">IR</span> transposon <span class="i">IR</span>] <span class="t">ATGCA</span> CAG...
+   ...ATC <span class="t">TACGT</span> [<span class="i">IR</span> transposon <span class="i">IR</span>] <span class="t">TACGT</span> GTC...
+          <span class="t">direct repeat</span>                     <span class="t">direct repeat</span></div>
+
+    <h2 style="margin-top:6px">How the detector works</h2>
+    <ol class="steps">
+      <li><h3>Index every 7-letter word</h3><p>Save each 7-letter word with its positions in a dictionary.</p><span class="cs">CS: hash table</span></li>
+      <li><h3>Look for inverted repeat pairs</h3><p>For each word, compute its reverse complement (reverse it and swap A↔T, C↔G) and look it up. A match 24–150 letters to the right is a possible transposon.</p><span class="cs">CS: lookup instead of comparing every pair</span></li>
+      <li><h3>Grow the match</h3><p>Extend outwards and inwards while the letters are still reverse complements. This gives the full inverted repeat.</p></li>
+      <li><h3>Check the direct repeats</h3><p>The 4–10 letters just before the start must be the same as the letters just after the end. If not, move both edges one letter inwards and try again. Random letters next to the IR sometimes fake one extra matching letter, and this step fixes that.</p></li>
+      <li><h3>Remove overlaps and report</h3><p>If two candidates overlap, keep the one with the higher score (IR length + 2 × direct repeat length). Report start and end, counting from 1.</p></li>
+    </ol>
+    <h2 style="margin-top:6px">Why random DNA almost never fools it</h2>
+    <p class="muted" style="max-width:72ch">A 7-letter word has 4<sup>7</sup> = 16,384 versions. In 400 letters with a 125-letter window we expect about 400 × 125 ÷ 16,384 ≈ 3 random IR pairs. Each one also needs a 4-letter direct repeat in exactly the right place, which has a chance of 1 in 4<sup>4</sup> = 256. So about 3 ÷ 256 ≈ 0.01 false transposons per sequence.</p>
+  </section>
+
+  <footer>Simulated DNA transposons (cut-and-paste type) with perfect inverted repeats. Everything runs in your browser.</footer>
+</div>
+
+<script>
+const COMP={A:"T",T:"A",C:"G",G:"C"};
+const rc=s=>{let o="";for(let i=s.length-1;i>=0;i--)o+=COMP[s[i]]||"N";return o;};
+const $=id=>document.getElementById(id);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let cur=null;
+
+function rng(seed){let a=seed>>>0;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const ri=(r,a,b)=>a+Math.floor(r()*(b-a+1));
+const dna=(n,r)=>{let s="";for(let i=0;i<n;i++)s+="ACGT"[Math.floor(r()*4)];return s;};
+
+function build(seed,count,tsdLen){
+  const r=rng(seed),mk=()=>{let ir=dna(ri(r,8,10),r);while(ir===rc(ir))ir=dna(ir.length,r);const core=dna(ri(r,15,35),r);return {ir,te:ir+core+rc(ir)};};
+  let tes=Array.from({length:count},mk);const gap=10,minHost=count*(tsdLen+2*gap);
+  let space=tes.reduce((a,t)=>a+t.te.length+tsdLen,0);
+  while(space+minHost>400){tes=Array.from({length:count},mk);space=tes.reduce((a,t)=>a+t.te.length+tsdLen,0);}
+  const total=ri(r,Math.max(200,space+minHost),400),hostLen=total-space,host=dna(hostLen,r),sec=Math.floor(hostLen/count);
+  const pts=Array.from({length:count},(_,k)=>ri(r,k*sec+gap,(k+1)*sec-tsdLen-gap));
+  const order=[...Array(count).keys()];for(let i=count-1;i>0;i--){const j=Math.floor(r()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
+  let seq="",last=0;const truth=[];
+  pts.forEach((p,k)=>{const {ir,te}=tes[order[k]];seq+=host.slice(last,p+tsdLen);truth.push({start:seq.length+1,end:seq.length+te.length,ir,tsd:host.substr(p,tsdLen)});seq+=te;last=p;});
+  seq+=host.slice(last);
+  return {seq,truth};
+}
+
+function tsdLength(seq,s,e,tmin,tmax){for(let t=tmax;t>=tmin;t--)if(s-t>=0&&e+t<=seq.length&&seq.slice(s-t,s)===seq.slice(e,e+t))return t;return 0;}
+function detect(seq,minIr=7,minTsd=4,maxTsd=10,minLen=24,maxLen=150){
+  const n=seq.length,idx=new Map(),seen=new Set(),cand=[];
+  for(let j=0;j+minIr<=n;j++){const w=seq.substr(j,minIr),a=idx.get(w);a?a.push(j):idx.set(w,[j]);}
+  for(let i=0;i+minIr<=n;i++){
+    const lo=i+minLen-minIr,hi=Math.min(n-minIr,i+maxLen-minIr),hits=idx.get(rc(seq.substr(i,minIr)));
+    if(!hits)continue;
+    for(const j of hits){
+      if(j<lo||j>hi)continue;
+      let s=i,e=j+minIr;
+      while(s>0&&e<n&&seq[s-1]===COMP[seq[e]]){s--;e++;}
+      let m=0;while(s+m<e-1-m&&seq[s+m]===COMP[seq[e-1-m]])m++;
+      const key=s+","+e;if(seen.has(key))continue;seen.add(key);
+      for(let d=0;d<=m-minIr;d++){
+        const t=tsdLength(seq,s+d,e-d,minTsd,maxTsd);
+        if(t){const bs=s+d,be=e-d,ir=m-d;cand.push({start:bs+1,end:be,length:be-bs,ir:seq.substr(bs,ir),irR:seq.slice(be-ir,be),tsd:seq.slice(bs-t,bs),score:ir+2*t});break;}
+      }
+    }
+  }
+  cand.sort((a,b)=>b.score-a.score);
+  const out=[];for(const c of cand)if(out.every(o=>c.end<o.start||c.start>o.end))out.push(c);
+  return out.sort((a,b)=>a.start-b.start);
+}
+
+function render(seq,found,truth,label){
+  cur={seq,found,truth};
+  const tk=truth?new Set(truth.map(t=>t.start+","+t.end)):null;
+  const exact=truth?found.filter(f=>tk.has(f.start+","+f.end)).length:0;
+  const b=$("banner");
+  if(truth){
+    const perfect=exact===truth.length&&found.length===truth.length;
+    b.className="banner "+(perfect?"ok":"part");
+    b.innerHTML=`<b>${perfect?"✓ ":""}Found ${found.length} transposon${found.length===1?"":"s"}: ${exact} of ${truth.length} with exact start and end</b><span class="muted">${label} · ${seq.length} bases · checked against the answer key after detection.</span>`;
+  }else{
+    b.className="banner part";
+    b.innerHTML=`<b>Found ${found.length} transposon${found.length===1?"":"s"}</b><span class="muted">${label} · ${seq.length} bases · no answer key for a pasted sequence.</span>`;
+  }
+  $("mapSub").textContent=truth?"Top row: what the detector found. Bottom row: the answer key. They should line up.":"What the detector found.";
+  drawMap();
+
+  $("tab").innerHTML="<tr><th>#</th><th>Start</th><th>End</th><th>Length</th><th>Left IR</th><th>Right IR</th><th>Direct repeat</th>"+(truth?"<th>Check</th>":"")+"</tr>"+
+    (found.length?found.map((f,k)=>`<tr><td class="m">${k+1}</td><td class="m">${f.start}</td><td class="m">${f.end}</td><td class="m">${f.length}</td><td class="m" style="color:var(--ir)">${f.ir}</td><td class="m" style="color:var(--ir)">${f.irR}</td><td class="m" style="color:var(--tsd)">${f.tsd}</td>${truth?`<td class="${tk.has(f.start+","+f.end)?"ok-t":"bad-t"}">${tk.has(f.start+","+f.end)?"✓ exact":"✗ not in key"}</td>`:""}</tr>`).join(""):`<tr><td colspan="8" class="muted">No transposons found.</td></tr>`);
+  if(truth){const fk=new Set(found.map(f=>f.start+","+f.end));const missed=truth.filter(t=>!fk.has(t.start+","+t.end));
+    if(missed.length)$("tab").innerHTML+=missed.map(t=>`<tr><td class="m">–</td><td class="m">${t.start}</td><td class="m">${t.end}</td><td class="m">${t.end-t.start+1}</td><td colspan="3" class="muted">in the answer key</td><td class="bad-t">✗ missed</td></tr>`).join("");}
+
+  $("close").innerHTML=found.length?found.map((f,k)=>{
+    const s=f.start-1,e=f.end,t=f.tsd.length,ir=f.ir.length,core=seq.slice(s+ir,e-ir);
+    return `<span class="lb">#${k+1}  position ${f.start}–${f.end}</span>\n${seq.slice(Math.max(0,s-t-4),s-t).toLowerCase()}<span class="t">${f.tsd}</span> <span class="i">${f.ir}</span><span class="c">${core.length>14?core.slice(0,6)+"…"+core.slice(-6):core}</span><span class="i">${f.irR}</span> <span class="t">${seq.slice(e,e+t)}</span>${seq.slice(e+t,e+t+4).toLowerCase()}\n<span class="lb">   right IR reversed and complemented: ${rc(f.irR)} = left IR ${rc(f.irR)===f.ir?"✓":"✗"}</span>`;
+  }).join("\n\n"):"Nothing to show.";
+
+  const cls=new Array(seq.length).fill("");
+  for(const f of found){const s=f.start-1,e=f.end,t=f.tsd.length,ir=f.ir.length;
+    for(let p=s-t;p<s;p++)cls[p]="t";for(let p=e;p<e+t;p++)cls[p]="t";
+    for(let p=s;p<e;p++)cls[p]=(p<s+ir||p>=e-ir)?"i":"c";}
+  let h="",open="";
+  for(let p=0;p<seq.length;p++){
+    if(p%60===0){if(open){h+="</span>";open="";}h+=(p?"\n":"")+`<span class="pos">${String(p+1).padStart(4," ")}  </span>`;}
+    if(cls[p]!==open){if(open)h+="</span>";if(cls[p])h+=`<span class="${cls[p]}">`;open=cls[p];}
+    h+=seq[p];
+  }
+  if(open)h+="</span>";$("seqview").innerHTML=h;
+}
+
+function drawMap(){
+  if(!cur)return;const {seq,found,truth}=cur,cv=$("map"),dpr=window.devicePixelRatio||1,w=cv.parentElement.clientWidth,rows=truth?2:1,h=rows*34+22;
+  cv.style.height=h+"px";cv.width=w*dpr;cv.height=h*dpr;const c=cv.getContext("2d");c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);
+  const L=seq.length,x=p=>p/L*w;
+  const row=(items,y,label)=>{
+    c.fillStyle=css("--host");c.fillRect(0,y,w,20);
+    for(const f of items){const s=f.start-1,e=f.end,t=f.tsd.length,ir=f.ir.length;
+      c.fillStyle=css("--tsd");c.fillRect(x(s-t),y,x(t),20);c.fillRect(x(e),y,x(t),20);
+      c.fillStyle=css("--core");c.fillRect(x(s),y,x(e-s),20);
+      c.fillStyle=css("--ir");c.fillRect(x(s),y,x(ir),20);c.fillRect(x(e-ir),y,x(ir),20);}
+    c.fillStyle=css("--muted");c.font="11px "+css("--f-mono");c.fillText(label,2,y+31);
+  };
+  row(found,0,"detected");
+  if(truth)row(truth.map(t=>({start:t.start,end:t.end,tsd:t.tsd,ir:t.ir})),34,"answer key");
+  c.fillStyle=css("--muted");c.font="11px "+css("--f-mono");const e=L+" nt";c.fillText(e,w-c.measureText(e).width,h-2);
+}
+
+function make(){
+  const seed=+$("seed").value||0,count=+$("count").value,t=Math.max(4,Math.min(9,+$("tsd").value||5));
+  const {seq,truth}=build(seed,count,t);render(seq,detect(seq),truth,`Artificial sequence, seed ${seed}`);
+}
+function runTests(){
+  $("testStatus").textContent="Running…";$("testStats").innerHTML="";
+  setTimeout(()=>{
+    const t0=performance.now();let ok=0,tot=0,fp=0,perfect=0;
+    for(let s=0;s<1000;s++){const count=s%2?3:4,{seq,truth}=build(100000+s,count,5),f=detect(seq);
+      const tk=new Set(truth.map(t=>t.start+","+t.end)),fk=new Set(f.map(x=>x.start+","+x.end));
+      let o=0;fk.forEach(k=>tk.has(k)?o++:fp++);ok+=o;tot+=truth.length;if(o===truth.length&&fk.size===tk.size)perfect++;}
+    const ms=performance.now()-t0;
+    $("testStatus").textContent=`Done in ${(ms/1000).toFixed(1)} s`;
+    $("testStats").innerHTML=[[(ok/tot*100).toFixed(2)+"%","exact start and end"],[`${ok.toLocaleString()} / ${tot.toLocaleString()}`,"transposons found exactly"],[fp,"false hits"],[(perfect/10).toFixed(1)+"%","sequences 100% right"]]
+      .map(([v,l])=>`<div><b>${v}</b><span>${l}</span></div>`).join("");
+  },30);
+}
+
+$("make").addEventListener("click",make);
+$("reseed").addEventListener("click",()=>{$("seed").value=Math.floor(Math.random()*100000);make();});
+["count","tsd","seed"].forEach(id=>$(id).addEventListener("change",make));
+$("detectOwn").addEventListener("click",()=>{
+  const seq=$("own").value.split(/\r?\n/).filter(l=>!l.trim().startsWith(">")).join("").toUpperCase().replace(/U/g,"T").replace(/[^ACGT]/g,"");
+  if(seq.length<30){$("banner").className="banner part";$("banner").innerHTML="<b>Sequence too short</b><span class='muted'>Paste at least 30 bases of DNA.</span>";return;}
+  render(seq,detect(seq),null,"Pasted sequence");
+});
+$("test").addEventListener("click",runTests);
+$("copy").addEventListener("click",e=>{if(!cur)return;const txt="Start,End,Length,Left IR,Right IR,Direct repeat\n"+cur.found.map(f=>[f.start,f.end,f.length,f.ir,f.irR,f.tsd].join(",")).join("\n");
+  const b=e.target;try{navigator.clipboard.writeText(txt).then(()=>{b.textContent="Copied";setTimeout(()=>b.textContent="Copy table",1200);},()=>{});}catch(err){}});
+document.querySelectorAll("[role=tab]").forEach(tab=>tab.addEventListener("click",()=>{
+  document.querySelectorAll("[role=tab]").forEach(t=>{const on=t===tab;t.setAttribute("aria-selected",on);$(t.getAttribute("aria-controls")).hidden=!on;});
+  if(tab.id==="t-lab")drawMap();
+}));
+let rt;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(drawMap,150);});
+make();
+</script>
+
+</body>
+</html>

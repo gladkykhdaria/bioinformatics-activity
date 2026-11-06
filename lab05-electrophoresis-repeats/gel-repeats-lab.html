@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gel &amp; Repeats Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;600&family=Source+Sans+3:wght@400;600;700&family=Roboto+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column. Shared sequence card, then tabs: Gel electrophoresis · Tandem repeats · How it works. Light only, blue/white/green; the gel itself is dark like a real UV gel image. */
+:root{
+  --bg:#f7f9fc; --white:#ffffff; --ink:#1b2a3a; --muted:#5b6b7d; --line:#dde4ee; --soft:#eef3fa;
+  --blue:#1f5fbf; --blue-soft:#e6eefb; --green:#1e8a4c; --green-soft:#e5f4ea;
+  --gel:#0f1d2e; --well:#24364d; --band:#7dff9e; --ladder:#9fd3ff;
+  --u3:#1f5fbf; --u4:#1e8a4c; --u5:#8a5a00;
+  --f-head:"Lexend",system-ui,sans-serif;
+  --f-body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"Roboto Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 var(--f-body)}
+.wrap{max-width:980px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-direction:column;gap:6px}
+.course{font-size:14px;color:var(--muted)}
+h1{font:600 clamp(28px,5vw,38px)/1.15 var(--f-head);margin:0;color:var(--blue)}
+.lede{margin:0;color:var(--muted);max-width:68ch;font-size:17px}
+h2{font:600 19px/1.3 var(--f-head);margin:0}
+h3{font:600 16px/1.3 var(--f-head);margin:0}
+p{margin:0}
+.muted{color:var(--muted)} .small{font-size:14px}
+.card{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.btns{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.file{display:flex;align-items:center;border:1px dashed #b9c6d8;border-radius:8px;padding:8px 12px;background:var(--soft);min-width:0;flex:1 1 280px}
+.file input{font:14px var(--f-body);max-width:100%}
+.gname{font:13.5px var(--f-mono);color:var(--muted);word-break:break-word}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:13.5px;color:var(--muted);font-weight:600}
+input[type=number]{font:15px var(--f-mono);color:var(--ink);background:var(--white);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}
+button{font:600 15px var(--f-body);border-radius:8px;padding:9px 16px;cursor:pointer;border:1px solid var(--line);background:var(--white);color:var(--ink)}
+button:hover{border-color:var(--blue);color:var(--blue)}
+button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+button.primary:hover{background:#184c99;color:#fff}
+button.sm{font-size:13.5px;padding:6px 12px}
+button:focus-visible,input:focus-visible,[role=tab]:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);overflow-x:auto}
+.tabs button{border:none;border-radius:8px 8px 0 0;background:none;padding:10px 14px;font-size:15px;color:var(--muted);margin-bottom:-2px;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--blue);border-bottom-color:var(--blue)}
+.array{font:14px/1.6 var(--f-mono);background:var(--soft);border-radius:8px;padding:10px 14px;word-break:break-word}
+.gelwrap{background:var(--gel);border-radius:10px;padding:10px;overflow-x:auto}
+canvas{display:block;width:100%}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.stats div{background:var(--soft);border-radius:8px;padding:10px 12px}
+.stats b{display:block;font:600 19px var(--f-head);font-variant-numeric:tabular-nums}
+.stats span{font-size:13px;color:var(--muted)}
+.tablewrap{overflow-x:auto;max-height:360px;overflow-y:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{text-align:left;padding:6px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:13px;font-weight:600;color:var(--muted);background:var(--soft);position:sticky;top:0}
+td.m{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+tr.click{cursor:pointer} tr.click:hover td,tr.sel td{background:var(--blue-soft)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:14px;color:var(--muted)}
+.dot{display:inline-block;width:12px;height:10px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.seq{font:13px/1.9 var(--f-mono);background:var(--soft);border-radius:8px;padding:12px 14px;word-break:break-all;max-height:360px;overflow-y:auto;letter-spacing:.02em}
+.seq mark{border-radius:2px;padding:1px 0;color:#fff}
+.seq mark.k3{background:var(--u3)} .seq mark.k4{background:var(--u4)} .seq mark.k5{background:var(--u5)}
+.seq mark.hit{outline:3px solid #f2b705}
+.seq .pos{color:#9aa9bb;user-select:none}
+.note{border-left:3px solid var(--blue);background:var(--soft);padding:12px 16px;border-radius:0 8px 8px 0;font-size:15px}
+.checks{display:flex;gap:16px;flex-wrap:wrap;font-size:15px}
+.checks label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.checks input{accent-color:var(--blue)}
+ol.steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:10px}
+ol.steps li::marker{font:600 16px var(--f-head);color:var(--blue)}
+ol.steps p{color:var(--muted);max-width:72ch}
+code{font:13.5px var(--f-mono);background:var(--soft);padding:1px 5px;border-radius:4px}
+.cs{font-size:14px;color:var(--green)}
+footer{font-size:13.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="course">Bioinformatics · FILS, POLITEHNICA Bucharest · Lab 05</div>
+    <h1>Gel &amp; Repeats Lab</h1>
+    <p class="lede">Exercise 1 cuts random fragments from a DNA sequence and runs them on a simulated electrophoresis gel. Exercise 2 finds short repeated units (3–5 bases) in the same sequence.</p>
+  </header>
+
+  <section class="card" aria-labelledby="seq-h">
+    <h2 id="seq-h">DNA sequence</h2>
+    <div class="btns">
+      <label class="file" for="file"><input type="file" id="file" accept=".fasta,.fna,.fa,.fas,.txt,.gz"></label>
+      <button id="sample">Use lab sequence</button>
+    </div>
+    <div class="gname" id="gname"></div>
+  </section>
+
+  <nav class="tabs" role="tablist" aria-label="Exercises">
+    <button role="tab" id="t-gel" aria-controls="p-gel" aria-selected="true">Exercise 1 · Gel electrophoresis</button>
+    <button role="tab" id="t-rep" aria-controls="p-rep" aria-selected="false">Exercise 2 · Tandem repeats</button>
+    <button role="tab" id="t-how" aria-controls="p-how" aria-selected="false">How it works</button>
+  </nav>
+
+  <section class="card" role="tabpanel" id="p-gel" aria-labelledby="t-gel">
+    <div class="form">
+      <label for="ns">Samples<input type="number" id="ns" value="10" min="1" max="20"></label>
+      <label for="mn">Min length (bp)<input type="number" id="mn" value="100" min="10"></label>
+      <label for="mx">Max length (bp)<input type="number" id="mx" value="3000" min="10"></label>
+      <label for="seed">Random seed<input type="number" id="seed" value="42"></label>
+    </div>
+    <div class="btns">
+      <button class="primary" id="take">Take samples</button>
+      <button id="runGel">▶ Run the gel</button>
+      <button class="sm" id="reseed">New random seed</button>
+    </div>
+    <div>
+      <h3>The array</h3>
+      <p class="muted small" style="margin-bottom:6px">Lengths of the 10 fragments, in the order they were taken.</p>
+      <div class="array" id="array"></div>
+    </div>
+    <div class="gelwrap"><canvas id="gel" aria-label="Simulated electrophoresis gel"></canvas></div>
+    <p class="muted small">Wells are at the top (− pole). DNA is negative, so it moves down towards the + pole. Short fragments slip through the gel faster and end up lower. Blue lane = ladder with known sizes.</p>
+    <div class="tablewrap"><table id="gtab"></table></div>
+  </section>
+
+  <section class="card" role="tabpanel" id="p-rep" aria-labelledby="t-rep" hidden>
+    <div class="form">
+      <label for="rmin">Repeat region min (bases)<input type="number" id="rmin" value="6" min="2"></label>
+      <label for="rmax">Repeat region max (bases)<input type="number" id="rmax" value="10" min="2"></label>
+    </div>
+    <div class="checks" role="group" aria-label="Unit lengths">
+      <span class="muted small" style="font-weight:600">Unit length:</span>
+      <label><input type="checkbox" id="k3" checked> 3 bases</label>
+      <label><input type="checkbox" id="k4" checked> 4 bases</label>
+      <label><input type="checkbox" id="k5" checked> 5 bases</label>
+    </div>
+    <div class="stats" id="rstats"></div>
+    <div class="note" id="chance"></div>
+    <div>
+      <h3>Where they are</h3>
+      <canvas id="rmap" aria-label="Repeat positions along the sequence"></canvas>
+      <div class="legend" style="margin-top:6px"><span><i class="dot" style="background:var(--u3)"></i>3-base unit</span><span><i class="dot" style="background:var(--u4)"></i>4-base unit</span><span><i class="dot" style="background:var(--u5)"></i>5-base unit</span></div>
+    </div>
+    <div class="btns" style="justify-content:space-between"><h3>All repeats</h3><button class="sm" id="copyRep">Copy table</button></div>
+    <p class="muted small">Click a row to find it in the sequence.</p>
+    <div class="tablewrap"><table id="rtab"></table></div>
+    <h3>Sequence with repeats marked</h3>
+    <div class="seq" id="seqview"></div>
+  </section>
+
+  <section class="card" role="tabpanel" id="p-how" aria-labelledby="t-how" hidden>
+    <h2>Exercise 1: gel electrophoresis</h2>
+    <ol class="steps">
+      <li><h3>Take the samples</h3><p>For each sample pick a random length between 100 and 3000 (not longer than the sequence) and a random start, then copy that part. All 10 go into one array.</p><span class="cs">CS: random numbers + list of strings</span></li>
+      <li><h3>Why DNA moves</h3><p>DNA has a negative charge, so in an electric field it moves to the + side. The gel works like a net: short pieces get through easily, long pieces get stuck more.</p></li>
+      <li><h3>How far it moves</h3><p>Distance is not linear with size, it follows the logarithm: <code>distance = a − b · log10(length)</code>. That's why 100 and 200 bp are far apart on a gel, but 2000 and 2100 bp almost touch.</p><span class="cs">CS: one math function per fragment</span></li>
+      <li><h3>Read the size</h3><p>The ladder lane has fragments of known size. Compare a band with the ladder next to it to estimate its length, like reading a ruler.</p></li>
+    </ol>
+    <h2 style="margin-top:6px">Exercise 2: tandem repeats</h2>
+    <ol class="steps">
+      <li><h3>What we look for</h3><p>A short unit of 3–5 bases written two or more times in a row, so that the whole block is 6–10 bases. For example <code>ATG ATG</code>, <code>ATG ATG ATG</code>, <code>GATC GATC</code>, <code>ACGTT ACGTT</code>.</p></li>
+      <li><h3>How the scan works</h3><p>For unit length k, compare every letter with the letter k places later. A row of matches means the sequence is repeating with period k. Region length = matches + k, and copies = region ÷ k.</p><span class="cs">CS: one pass per k, O(n)</span></li>
+      <li><h3>Skip fake units</h3><p><code>AAA</code> is really just <code>A</code> repeated, and <code>ATAT</code> is <code>AT</code> repeated. These aren't real 3–5 base units, so they're skipped.</p></li>
+      <li><h3>Compare with chance</h3><p>Short repeats also show up in random DNA by pure luck. The app shuffles the same letters 100 times and counts again. If the real count is inside that range, the repeats are mostly random.</p><span class="cs">CS: shuffle test (a simple permutation test)</span></li>
+    </ol>
+  </section>
+
+  <footer>Sequence: NCBI RefSeq NC_021202.1. Gel distances use a simple log model, not a physical simulation.</footer>
+</div>
+
+<script>
+const SAMPLE={name:"NC_021202.1 Ageratum Yellow vein China virus - OX1, complete genome",seq:"ACCGGATGGCCGCGATTTTTTTTAAAGTGGTCACCACCACTAACAAATGTCCTCCACTAAAAACGCTCCCTCAAAGCTTATTTAATTCAAATCCATTATAAATACTTGGTCCCCAAGTATTAAAGCTAAACATGTGGGATCCTCTTTTGAACGAGTTTCCCGAAACCGTACACGGGTTTAGGTGTATGTTAGCCATTAAGTATTTGCAATTAGTTGAAAATACATACTCTCCTGATACATTAGGGTACGATTTGCTTCGTGATTTAATTTCAGTTATTCGTGCTAGAGATTATGTCGAAGCGTCCCGCCGATATAGTCATTTCCACTCCCGCATCCAAGGTGCGTCGCCGTCTGAACTTCGACAGCCCGTATGTCAGCCGTGCTGCTGCCCCCACTGTCCTCGTCACAAACAAAAGGAGGTCATGGGTGAATCGGCCCATGTACCGAAAGCCCAGGATGTACAGGATGTATAGAAGCCCTGATGTTCCTAAGGGTTGTGAAGGCCCGTGTAAGGTGCAGTCCTATGAGGCCCGTCATGATGTGTCCCATACTGGTAAGGTCATATGTGTCACGGATGTTACACGTGGTAATGGTATTACCCATCGAGTTGGTAAGAGGTTTTGTGTGAAATCCATCTACGTCATTGGGAAGATATGGATGGATGAAAATATTAAATTGAAGAATCACACCAATACAGTTATGTTTTTTCTAGTTAGAGATCGGCGTCCGAGTGGTACTCCGATGGATTTCCAGCAGGTTTTTAATTGTTATGACAATGAGCCAAGCACTGGTACTGTGAAGAATGATCTCAGGGATAGGTTTCAAGTCATTCGGAAGTTCAACTATATGGTTACTGGTGGGCAGTATGCGTCTAAAGAACAGGCATTGGTGAAGAAGTTCATGCGGGTTAATACCCATGTTGTTTACAACCATCAAGAACAGGCAAAGTATGAGAATCATACGGAGAATGCATTATTGTTGTATATGGTTTCTACTCATGCTAGTAATCCTGTATATGCGACTTTGAAAGTCCGCATCTATTTCTATGATTCACAAATGAATTAATAAATATTGAATTTTATTATATTTGAATGTCTTACATATTCTGTGTTTTCCAATACATCCCATAATACATGATTACATGCTCTAATTACATTATTAATACTAATTACACCCAAATTATCTAAATATTTCATACATTGAACCCTAAATACTCTTAAGAAACGCCAAGTCTGAGGTTGTAAGCGAGTCCAGATCTGGAAGATCAGAAAACACTGGTGTATTCCCAACGCTTTCCTCAGGTTGTGGTTGAATTGTATTTGGATCGTTATGATGTCGTGGTTGGTGTTGAATGGTCTCTCGTGGTGCTTGGTTATCTTGAAATATAGGGGATTTTTGATTGTCCAGGTATACACGCCACTCTCGCATTGAGTTGCAGTGAGTAATTCCCCTGTGCGAAAATCCATGATTTGCACAATCTATGCCGAAGTAGTATGAGCACCCGCACGTTAGATCAACTCTCCGTCTCCGAATGGGCTTCCTCTTGGATATTCTGTGTTGCACTTTGATTGGCACCTGAGTACAATGCGCTGTTGAGGGTGATGAATTCTGCATTCTTTAATGCCCAATCTTTTAAAGCTGAATTTTTATCCTCATTCAAGTACTCTTTATATGATGATGTTGGGCCTGGATTGCAAAGGAAGATAGTTGGGATTCCACCTTTAATTTGAATTGGTTTCCCGTACTTAGTGTTGCTTTGCCAGTCCCTTTGGGCCCCCATGAATTCTTTAAAGTGCTTTAGATAATGGGGGTCTACGTCATCAATGACGTTATACCAAGCATCATTACTGTATACCTTTGGGCTTAGATCAAGATGTCCACACAAATAATTGTGTGGTCCCAGTGATCTGGCCCACATTGTTTTACCTGTACGACTATCACCTTCTATCACAATACTTTTGGGTCTCCAAGGCCGCGCAGCGGCACCACTCACATTTTCAGAAACCCACTCTTCAAGTTCTTCTGGAACTTGATCGAATGAAGAAGAAAGAAATGGACAAACAAAAACCTCTAAAGGAGGTGCAAAAATCCTATCTAAGTTAGAGTTTAAATTATGAAATTGTAAAACATAATCTTTAGGAGCTAACTCCTTAATTACTCTAAGAGCCTCAGACTTACTGCCGCTGTTAATTGCCTGGGCGTAAGCGTCATTGGCTGTCTGTTGTCCCCCTCTTGCAGAGCGTCCGTCGATCTGAAATTCTCCCCATTCGAGGGTGTCTCCGTCCTTCTCCAGGTAGGACTTGACGTCGGAGCTGGATTTAGCTCCCTGAATGTTCGGATGGAAATGTGCTGACCTGGTTGGGGAGACCAGGTCGAAGAATCTGTTATTTTGGCATTTGTATTTGCCTTCGAATTGGATAAGCACGTGGAGATGAGGGCTCCCATCTTCATGAAGTTCGCTGCAGATTTTGATGTATTTTTTATTTGTTGGGGTGTTTAGGTTTTTTATTTGGGAAAGTGCCTCTTCTTTAGTAAGAGAGCATTGTGGATAAGTGAGGAAAAAGTTTTTGGCATATATTTGAAAACGCTTAGGAGGAGCCATTGACTTGGTCAATCGGTACTCAACAAACTTGGCTATGCAATCGGTGATTGGTACTCAATATATAGTGAGTACCAAATGGCATGATTGTAATTTCTTAAAGAAATTCAAATTCCAATCGCGGCCATCCGTATAATATT"};
+const LADDER=[100,200,300,500,700,1000,1500,2000,3000];
+const $=id=>document.getElementById(id);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let genome=SAMPLE,samples=[],repeats=[],anim=null;
+
+function rng(seed){let a=seed>>>0;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+function takeSamples(){
+  const s=genome.seq,n=Math.max(1,Math.min(20,+$("ns").value||10));
+  let mn=Math.max(10,+$("mn").value||100),mx=Math.min(+$("mx").value||3000,s.length);mn=Math.min(mn,mx);
+  const r=rng(+$("seed").value||0);samples=[];
+  for(let i=0;i<n;i++){const len=mn+Math.floor(r()*(mx-mn+1)),st=Math.floor(r()*(s.length-len+1));samples.push({start:st,len,seq:s.substr(st,len)});}
+  $("array").textContent="["+samples.map(x=>x.len).join(", ")+"]";
+  $("gtab").innerHTML="<tr><th>Lane</th><th>Length</th><th>Distance</th><th>From – to (nt)</th><th>Starts with</th></tr>"+
+    samples.map((x,i)=>`<tr><td class="m">S${i+1}</td><td class="m">${x.len.toLocaleString()} bp</td><td class="m">${(dist(x.len)*100).toFixed(1)}%</td><td class="m">${(x.start+1).toLocaleString()} – ${(x.start+x.len).toLocaleString()}</td><td class="m">${x.seq.slice(0,24)}…</td></tr>`).join("");
+  drawGel(1);
+}
+function dist(len){const lo=Math.log10(100),hi=Math.log10(3000);return 0.06+0.86*(hi-Math.log10(Math.max(len,1)))/(hi-lo);}
+
+function drawGel(t){
+  const cv=$("gel"),dpr=window.devicePixelRatio||1,lanes=samples.length+1;
+  const w=Math.max(cv.parentElement.clientWidth-20,lanes*52+60),h=440;
+  cv.style.width=w+"px";cv.style.height=h+"px";cv.width=w*dpr;cv.height=h*dpr;
+  const c=cv.getContext("2d");c.setTransform(dpr,0,0,dpr,0,0);
+  c.fillStyle=css("--gel");c.fillRect(0,0,w,h);
+  const left=46,laneW=(w-left-8)/lanes,top=26,bottom=h-30,run=bottom-top;
+  c.font="11px "+css("--f-mono");c.textAlign="center";
+  for(let i=0;i<lanes;i++){
+    const x=left+i*laneW;c.fillStyle=css("--well");c.fillRect(x+laneW*0.14,top-14,laneW*0.72,8);
+    c.fillStyle="#c9d6e6";c.fillText(i?`S${i}`:"Ladder",x+laneW/2,h-10);
+  }
+  c.textAlign="right";
+  for(const L of LADDER){
+    const y=top+run*dist(L)*t;c.fillStyle=css("--ladder");c.globalAlpha=.9;c.fillRect(left+laneW*0.14,y-2,laneW*0.72,4);c.globalAlpha=1;
+    if(t>=1){c.fillStyle="#b8c4d4";c.fillText(L,left-6,y+4);}
+  }
+  c.textAlign="center";
+  samples.forEach((s,i)=>{
+    const x=left+(i+1)*laneW,y=top+run*dist(s.len)*t;
+    c.shadowColor=css("--band");c.shadowBlur=8;c.fillStyle=css("--band");c.fillRect(x+laneW*0.14,y-2.5,laneW*0.72,5);c.shadowBlur=0;
+    if(t>=1){c.fillStyle="#d8ffe3";c.fillText(s.len,x+laneW/2,y+16);}
+  });
+  c.textAlign="left";c.fillStyle="#7f93ab";c.fillText("−",8,top-6);c.fillText("+",8,bottom+4);c.fillText("bp",8,top+12);
+}
+function runGel(){
+  if(anim)cancelAnimationFrame(anim);
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches){drawGel(1);return;}
+  const t0=performance.now(),D=2200;
+  const step=now=>{const t=Math.min(1,(now-t0)/D);drawGel(1-Math.pow(1-t,2));if(t<1)anim=requestAnimationFrame(step);};
+  anim=requestAnimationFrame(step);
+}
+
+function primitive(u){const n=u.length;for(let d=1;d<n;d++)if(n%d===0&&u.slice(0,d).repeat(n/d)===u)return false;return true;}
+function findRepeats(s,ks){
+  const out=[];
+  for(const k of ks){
+    let i=0;
+    while(i<s.length-k){
+      if(s[i]!==s[i+k]){i++;continue;}
+      let j=i;while(j<s.length-k&&s[j]===s[j+k])j++;
+      const region=(j-i)+k,copies=Math.floor(region/k),unit=s.substr(i,k);
+      if(copies>=2&&primitive(unit))out.push({start:i,k,unit,copies,length:copies*k});
+      i=j+1;
+    }
+  }
+  return out.sort((a,b)=>a.start-b.start);
+}
+function shuffle(arr,r){for(let i=arr.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
+
+function analyzeRepeats(){
+  const s=genome.seq,ks=[3,4,5].filter(k=>$("k"+k).checked);
+  const lo=+$("rmin").value||6,hi=+$("rmax").value||10;
+  const all=findRepeats(s,ks);
+  repeats=all.filter(r=>r.length>=lo&&r.length<=hi);
+  const longer=all.filter(r=>r.length>hi);
+  const covered=new Set();for(const r of repeats)for(let p=r.start;p<r.start+r.length;p++)covered.add(p);
+  const by={3:0,4:0,5:0};repeats.forEach(r=>by[r.k]++);
+  const units={};repeats.forEach(r=>units[r.unit]=(units[r.unit]||0)+1);
+  const top=Object.entries(units).sort((a,b)=>b[1]-a[1])[0];
+  $("rstats").innerHTML=[[repeats.length,"repeats found"],[by[3],"3-base units"],[by[4],"4-base units"],[by[5],"5-base units"],
+    [(covered.size/s.length*100).toFixed(1)+"%","of bases inside repeats"],[top?`${top[0]} ×${top[1]}`:"–","most common unit"]]
+    .map(([v,l])=>`<div><b>${v}</b><span>${l}</span></div>`).join("");
+
+  const r=rng(1),letters=s.split(""),counts=[];
+  for(let n=0;n<100;n++){const sh=shuffle(letters,r).join("");counts.push(findRepeats(sh,ks).filter(x=>x.length>=lo&&x.length<=hi).length);}
+  const avg=counts.reduce((a,b)=>a+b,0)/counts.length,mn=Math.min(...counts),mx=Math.max(...counts);
+  const inside=repeats.length>=mn&&repeats.length<=mx;
+  $("chance").innerHTML=`<b>Is this more than chance?</b> Real sequence: <b>${repeats.length}</b> repeats. The same letters shuffled randomly 100 times: average <b>${avg.toFixed(1)}</b> (range ${mn}–${mx}). `+
+    (inside?"The real count is inside the random range, so most of these short repeats would appear by luck too.":`The real count is outside the random range: this sequence has unusually ${repeats.length>avg?"many":"few"} repeats.`)+
+    (longer.length?` Also found ${longer.length} longer repeat${longer.length>1?"s":""} (more than ${hi} bases): ${longer.slice(0,5).map(x=>`${x.unit}×${x.copies} at ${x.start+1}`).join(", ")}.`:` No repeats longer than ${hi} bases.`);
+
+  $("rtab").innerHTML="<tr><th>#</th><th>Position</th><th>Unit</th><th>Copies</th><th>Length</th><th>Sequence</th></tr>"+
+    (repeats.length?repeats.map((x,i)=>`<tr class="click" data-i="${i}" tabindex="0"><td class="m">${i+1}</td><td class="m">${(x.start+1).toLocaleString()}</td><td class="m" style="color:var(--u${x.k})">${x.unit}</td><td class="m">${x.copies}</td><td class="m">${x.length}</td><td class="m">${s.substr(x.start,x.length).match(new RegExp(`.{${x.k}}`,"g")).join(" ")}</td></tr>`).join(""):"<tr><td colspan='6' class='muted'>No repeats with these settings.</td></tr>");
+
+  drawMap();renderSeq();
+}
+function drawMap(){
+  const cv=$("rmap"),dpr=window.devicePixelRatio||1,w=cv.parentElement.clientWidth,h=54,G=genome.seq.length;
+  cv.style.height=h+"px";cv.width=w*dpr;cv.height=h*dpr;const c=cv.getContext("2d");c.setTransform(dpr,0,0,dpr,0,0);
+  c.clearRect(0,0,w,h);c.fillStyle=css("--line");c.fillRect(0,22,w,8);
+  for(const r of repeats){const x=r.start/G*w;const y={3:4,4:14,5:24}[r.k];c.fillStyle=css("--u"+r.k);c.fillRect(x,r.k===5?32:y,Math.max(2,r.length/G*w),r.k===5?14:16);}
+  c.font="11px "+css("--f-mono");c.fillStyle=css("--muted");c.fillText("1",0,h-1);const e=G.toLocaleString()+" nt";c.fillText(e,w-c.measureText(e).width,h-1);
+}
+function renderSeq(hit){
+  const s=genome.seq,marks=new Array(s.length).fill(-1);
+  repeats.forEach((r,i)=>{for(let p=r.start;p<r.start+r.length;p++)if(marks[p]<0)marks[p]=i;});
+  let html="",cur=-2;
+  for(let p=0;p<s.length;p++){
+    if(p%60===0){if(cur>=0){html+="</mark>";cur=-2;}html+=(p?"\n":"")+`<span class="pos">${String(p+1).padStart(5," ")} </span>`;}
+    const m=marks[p];
+    if(m!==cur){if(cur>=0)html+="</mark>";if(m>=0)html+=`<mark class="k${repeats[m].k}${m===hit?" hit":""}" id="${m===hit?"hitmark":""}" title="${repeats[m].unit} × ${repeats[m].copies} at ${repeats[m].start+1}">`;cur=m;}
+    html+=s[p];
+  }
+  if(cur>=0)html+="</mark>";
+  $("seqview").innerHTML=html.replace(/ id=""/g,"");$("seqview").style.whiteSpace="pre-wrap";
+}
+function jump(i){
+  document.querySelectorAll("#rtab tr").forEach(r=>r.classList.toggle("sel",r.dataset.i==String(i)));
+  renderSeq(i);const m=$("hitmark"),v=$("seqview");if(m)v.scrollTop=m.offsetTop-v.offsetTop-60;
+}
+
+function parseFasta(text){
+  let name="",parts=[],started=false;
+  for(const raw of text.split(/\r?\n/)){const l=raw.trim();if(!l)continue;if(l[0]===">"){if(started)break;name=l.slice(1);started=true;}else{started=true;parts.push(l.toUpperCase());}}
+  return {name,seq:parts.join("").replace(/U/g,"T").replace(/[^ACGT]/g,"")};
+}
+async function readFile(file){
+  const head=new Uint8Array(await file.slice(0,2).arrayBuffer());
+  if(head[0]===0x1f&&head[1]===0x8b)return await new Response(file.stream().pipeThrough(new DecompressionStream("gzip"))).text();
+  return await file.text();
+}
+function showName(){const L=genome.seq.length;$("gname").textContent=`${genome.name||"(unnamed)"} · ${L.toLocaleString()} nt`+(L<1000||L>3000?"  (the lab asks for 1000–3000 nt)":"");}
+function all(){showName();takeSamples();analyzeRepeats();}
+
+$("file").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;try{const r=parseFasta(await readFile(f));if(r.seq.length<100)throw new Error("too short");genome=r;all();}catch(err){$("gname").textContent="Couldn't read that file. Is it a FASTA file?";}});
+$("sample").addEventListener("click",()=>{genome=SAMPLE;all();});
+$("take").addEventListener("click",takeSamples);
+$("runGel").addEventListener("click",runGel);
+$("reseed").addEventListener("click",()=>{$("seed").value=Math.floor(Math.random()*100000);takeSamples();runGel();});
+["rmin","rmax","k3","k4","k5"].forEach(id=>$(id).addEventListener("change",analyzeRepeats));
+$("rtab").addEventListener("click",e=>{const r=e.target.closest("tr[data-i]");if(r)jump(+r.dataset.i);});
+$("rtab").addEventListener("keydown",e=>{const r=e.target.closest("tr[data-i]");if(r&&(e.key==="Enter"||e.key===" ")){e.preventDefault();jump(+r.dataset.i);}});
+$("copyRep").addEventListener("click",e=>{
+  const s=genome.seq,txt="Position,Unit,Copies,Length,Sequence\n"+repeats.map(r=>[r.start+1,r.unit,r.copies,r.length,s.substr(r.start,r.length)].join(",")).join("\n");
+  const b=e.target;try{navigator.clipboard.writeText(txt).then(()=>{b.textContent="Copied";setTimeout(()=>b.textContent="Copy table",1200);},()=>{});}catch(err){}
+});
+document.querySelectorAll("[role=tab]").forEach(tab=>tab.addEventListener("click",()=>{
+  document.querySelectorAll("[role=tab]").forEach(t=>{const on=t===tab;t.setAttribute("aria-selected",on);$(t.getAttribute("aria-controls")).hidden=!on;});
+  if(tab.id==="t-rep")drawMap();if(tab.id==="t-gel")drawGel(1);
+}));
+let rt;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{drawGel(1);drawMap();},150);});
+all();
+</script>
+
+</body>
+</html>

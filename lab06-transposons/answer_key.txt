@@ -1,0 +1,5 @@
+number	start	end	length	inverted_repeat	direct_repeat
+1	30	83	54	AGCTGGAACA	GGGTT
+2	114	163	50	TACGTTCAA	TTACA
+3	211	253	43	ATGAACTGGA	AAAGA
+4	307	341	35	CAAGGTAC	ATATG
