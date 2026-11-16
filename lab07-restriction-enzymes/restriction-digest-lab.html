@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Restriction Digest Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;600&family=Source+Sans+3:wght@400;600;700&family=Roboto+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column, numbered like the lab: idea → DNA → enzymes → functions step by step → results + map → gel → what I wondered. Light only, blue/white/green; the gel itself is dark like a UV photo. */
+:root{
+  --bg:#f7f9fc; --white:#ffffff; --ink:#1b2a3a; --muted:#5b6b7d; --line:#dde4ee; --soft:#eef3fa;
+  --blue:#1f5fbf; --blue-soft:#e6eefb; --green:#1e8a4c; --green-soft:#e5f4ea; --red:#c0392b;
+  --e1:#1f5fbf; --e2:#1e8a4c; --e3:#b26b00; --e4:#7a4fc2; --e5:#0f8b8d;
+  --gel:#0f1d2e; --well:#24364d; --band:#7dff9e; --ladder:#9fd3ff;
+  --f-head:"Lexend",system-ui,sans-serif;
+  --f-body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"Roboto Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 var(--f-body)}
+.wrap{max-width:980px;margin:0 auto;padding-inline:16px;padding-block:28px 64px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-direction:column;gap:6px}
+.course{font-size:14px;color:var(--muted)}
+h1{font:600 clamp(28px,5vw,38px)/1.15 var(--f-head);margin:0;color:var(--blue)}
+.lede{margin:0;color:var(--muted);max-width:70ch;font-size:17px}
+h2{font:600 20px/1.3 var(--f-head);margin:0}
+h2 .n{color:var(--blue);margin-right:6px}
+h3{font:600 16px/1.3 var(--f-head);margin:0}
+p{margin:0}
+.muted{color:var(--muted)} .small{font-size:14px}
+.card{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.prose{max-width:72ch;color:var(--ink)}
+.prose p+p{margin-top:8px}
+.wonder{border-left:3px solid var(--green);background:var(--green-soft);border-radius:0 8px 8px 0;padding:12px 16px;display:flex;flex-direction:column;gap:4px;font-size:15px}
+.wonder b.q{color:var(--green);font-family:var(--f-head);font-weight:600}
+.wonder.open{border-left-color:var(--blue);background:var(--blue-soft)}
+.wonder.open b.q{color:var(--blue)}
+.map-table{width:100%;border-collapse:collapse;font-size:15px}
+.map-table td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.map-table td:first-child{font-weight:600;white-space:nowrap}
+.map-table td:last-child{font-family:var(--f-mono);font-size:13.5px;color:var(--blue)}
+@media (max-width:600px){.map-table tr{display:grid;grid-template-columns:1fr;padding:6px 0;border-bottom:1px solid var(--line)}.map-table td{border:none;padding:1px 4px}}
+.btns{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.file{display:flex;align-items:center;border:1px dashed #b9c6d8;border-radius:8px;padding:8px 12px;background:var(--soft);min-width:0;flex:1 1 260px}
+.file input{font:14px var(--f-body);max-width:100%}
+button{font:600 15px var(--f-body);border-radius:8px;padding:9px 16px;cursor:pointer;border:1px solid var(--line);background:var(--white);color:var(--ink)}
+button:hover{border-color:var(--blue);color:var(--blue)}
+button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+button.primary:hover{background:#184c99;color:#fff}
+button.sm{font-size:13.5px;padding:6px 12px}
+button.on{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+select{font:15px var(--f-body);color:var(--ink);background:var(--white);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+label.chk{display:flex;gap:6px;align-items:center;font-size:15px;cursor:pointer}
+label.chk input{accent-color:var(--blue)}
+.gname{font:13.5px var(--f-mono);color:var(--muted);word-break:break-word}
+.enz{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.ez{border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0;border-top:4px solid var(--c)}
+.ez h3{color:var(--c)}
+.strands{font:14px/1.55 var(--f-mono);background:var(--soft);border-radius:8px;padding:10px 12px;white-space:pre;overflow-x:auto}
+.strands .cut{color:var(--red);font-weight:700}
+.strands .ov{background:#fff3c4;border-radius:2px}
+.strands .lb{color:var(--muted)}
+.facts{display:grid;grid-template-columns:max-content 1fr;gap:2px 12px;font-size:14px}
+.facts dt{color:var(--muted)} .facts dd{margin:0}
+.ok{color:var(--green);font-weight:600}
+.fn{border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:0}
+.fn .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;padding:10px 14px;background:var(--soft);border-bottom:1px solid var(--line)}
+.fn .top code{font:500 14px var(--f-mono);color:var(--blue)}
+.fn .top span{font-size:13px;color:var(--muted)}
+.fn .body{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.fn pre{margin:0;font:12.5px/1.55 var(--f-mono);background:#f4f6fa;border:1px solid var(--line);border-radius:6px;padding:10px 12px;overflow-x:auto}
+.io{display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;font-size:14px;align-items:baseline}
+.io dt{font:600 12px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.io dd{margin:0;font:13.5px var(--f-mono);word-break:break-word}
+.arrow{text-align:center;color:var(--muted);font-size:20px;line-height:1}
+.scan{font:15px/1.4 var(--f-mono);background:var(--soft);border-radius:8px;padding:14px;overflow-x:auto;white-space:pre}
+.scan .w{background:var(--blue);color:#fff;border-radius:2px}
+.scan .w.hit{background:var(--green)}
+.scan .ps{color:#9aa9bb}
+.scan .site{color:var(--green);font-weight:600}
+.scanmsg{font-size:15px;min-height:1.6em}
+.scanmsg b{font-family:var(--f-mono)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table.res{border-collapse:collapse;width:100%;font-size:14.5px}
+table.res th,table.res td{text-align:left;padding:7px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.res th{font-size:13px;font-weight:600;color:var(--muted);background:var(--soft)}
+table.res td.m{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+details.lst{border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+details.lst summary{cursor:pointer;font-weight:600}
+details.lst p{font:13px/1.7 var(--f-mono);margin-top:6px;word-break:break-word}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+@media (max-width:760px){.two{grid-template-columns:1fr}}
+canvas{display:block;max-width:100%}
+.gelwrap{background:var(--gel);border-radius:10px;padding:10px;overflow-x:auto}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:14px;color:var(--muted)}
+code{font:13.5px var(--f-mono);background:var(--soft);padding:1px 5px;border-radius:4px}
+footer{font-size:13.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="course">Bioinformatics · FILS, POLITEHNICA Bucharest · Lab 07</div>
+    <h1>Restriction Digest Lab</h1>
+    <p class="lede">Five restriction enzymes cut a real NCBI genome. For each enzyme: how many cuts, where, how long the pieces are, and what the gel would look like. Every function is shown step by step with the real data going through it.</p>
+  </header>
+
+  <section class="card" aria-labelledby="idea-h">
+    <h2 id="idea-h"><span class="n">0.</span>The idea</h2>
+    <div class="prose">
+      <p>A restriction enzyme is a pair of molecular scissors. It reads DNA, and whenever it finds its own short "password" sequence, it cuts there. Bacteria make these enzymes to chop up the DNA of viruses that attack them. They protect their own DNA by putting small chemical tags (methyl groups) on their own sites.</p>
+      <p>When I started, I noticed that this is almost exactly a text search followed by a <code>split()</code>. So I built it like that and kept a list of where the biology and the code meet:</p>
+    </div>
+    <table class="map-table">
+      <tr><td>DNA sequence</td><td>A long text made of 4 letters</td><td>dna: str</td></tr>
+      <tr><td>Recognition site</td><td>The word the enzyme looks for</td><td>site = "GAATTC"</td></tr>
+      <tr><td>Enzyme scanning DNA</td><td>Searching for that word in the text</td><td>dna.find(site, i)</td></tr>
+      <tr><td>Cleavage site</td><td>Where inside the word the cut happens</td><td>cut = position + offset</td></tr>
+      <tr><td>Palindrome site</td><td>The word reads the same on the other strand</td><td>revcomp(site) == site</td></tr>
+      <tr><td>Fragments</td><td>The pieces between cuts</td><td>lengths between cut indexes</td></tr>
+      <tr><td>Circular plasmid</td><td>The text has no real start or end</td><td>index % length</td></tr>
+      <tr><td>Gel electrophoresis</td><td>Sorting the pieces by size, on a log scale</td><td>d = a − b·log10(length)</td></tr>
+    </table>
+  </section>
+
+  <section class="card" aria-labelledby="dna-h">
+    <h2 id="dna-h"><span class="n">1.</span>The DNA</h2>
+    <div class="btns">
+      <button class="sm on" id="usePlasmid">Bacterial plasmid (default)</button>
+      <button class="sm" id="useVirus">Plant virus from lab 03</button>
+      <label class="file" for="file"><input type="file" id="file" accept=".fasta,.fna,.fa,.fas,.txt,.gz"></label>
+    </div>
+    <div class="gname" id="gname"></div>
+    <label class="chk"><input type="checkbox" id="circ" checked> Treat the DNA as a circle (plasmids and many small genomes are circular)</label>
+    <div class="wonder"><b class="q">Why did I pick this sequence?</b><span>It's <i>Yersinia pestis</i> plasmid pPCP1 (NCBI NC_005816), 9,609 bp. I first tried the 2,739 bp virus from lab 03, but there BamHI and HindIII cut only once, and the gel looked empty. This plasmid is longer, all 5 enzymes cut it, and it is a real circle, which turned out to change the maths (see section 6).</span></div>
+  </section>
+
+  <section class="card" aria-labelledby="enz-h">
+    <h2 id="enz-h"><span class="n">2.</span>The five enzymes (from the board)</h2>
+    <p class="muted small">Red ▼ / ▲ = where each strand is cut. Yellow = the single-stranded "sticky" overhang left after the cut.</p>
+    <div class="enz" id="enzCards"></div>
+    <div class="wonder"><b class="q">Why such strange names?</b><span>The name is the bacterium it was found in. <b>Eco</b>RI = <i>E</i>scherichia <i>co</i>li, strain R, first enzyme. <b>Bam</b>HI = <i>Ba</i>cillus <i>am</i>yloliquefaciens H. <b>Hin</b>dIII = <i>H</i>aemophilus <i>in</i>fluenzae Rd, third one. <b>Taq</b>I = <i>T</i>hermus <i>aq</i>uaticus (the same hot-spring bacterium that gave us Taq polymerase for PCR). <b>Hae</b>III = <i>H</i>aemophilus <i>ae</i>gyptius. So the name is basically a file path: genus / species / strain / number.</span></div>
+  </section>
+
+  <section class="card" aria-labelledby="fn-h">
+    <h2 id="fn-h"><span class="n">3.</span>How the program works, function by function</h2>
+    <p class="muted">Pick an enzyme and follow its data through the same functions as in <code>restriction_digest.py</code>. The boxes show the real input and output for the DNA above.</p>
+    <div class="btns"><span class="small muted" style="font-weight:600">Enzyme:</span><select id="fnEnz" aria-label="Enzyme for the walkthrough"></select></div>
+
+    <div class="fn">
+      <div class="top"><code>read_fasta(path)</code><span>step 1 · read the file</span></div>
+      <div class="body">
+        <p class="small">Skip the line that starts with <code>&gt;</code> (the name), glue all other lines into one string, keep only A, C, G, T.</p>
+        <dl class="io"><dt>in</dt><dd id="io1in"></dd><dt>out</dt><dd id="io1out"></dd></dl>
+      </div>
+    </div>
+    <div class="arrow">↓</div>
+    <div class="fn">
+      <div class="top"><code>find_sites(dna, site, circular)</code><span>step 2 · the enzyme scans the DNA</span></div>
+      <div class="body">
+        <pre>def find_sites(dna, site, circular):
+    text = dna + dna[:len(site) - 1] if circular else dna
+    hits, i = [], text.find(site)
+    while i != -1 and i &lt; len(dna):
+        hits.append(i)
+        i = text.find(site, i + 1)
+    return hits</pre>
+        <p class="small">Look for the site, remember where it starts, keep looking from the next letter. For a circle I glue the first few letters to the end, so a site that crosses the "end" of the circle is not missed.</p>
+        <dl class="io"><dt>in</dt><dd id="io2in"></dd><dt>out</dt><dd id="io2out"></dd></dl>
+        <h3 style="margin-top:6px">Watch the enzyme search</h3>
+        <div class="scan" id="scan" aria-live="polite"></div>
+        <div class="scanmsg" id="scanmsg"></div>
+        <div class="btns">
+          <button class="sm" id="stepBtn">Step →</button>
+          <button class="sm" id="jumpBtn">Jump to the site</button>
+          <button class="sm" id="resetBtn">Reset</button>
+        </div>
+      </div>
+    </div>
+    <div class="arrow">↓</div>
+    <div class="fn">
+      <div class="top"><code>cut_positions(sites, offset, length)</code><span>step 3 · where exactly it cuts</span></div>
+      <div class="body">
+        <pre>def cut_positions(sites, offset, length):
+    return sorted({(s + offset) % length for s in sites})</pre>
+        <p class="small">The enzyme doesn't cut at the start of the site but a few letters inside it (EcoRI after the first G). So cut = site start + offset. The <code>% length</code> wraps it around for a circle.</p>
+        <dl class="io"><dt>in</dt><dd id="io3in"></dd><dt>out</dt><dd id="io3out"></dd></dl>
+      </div>
+    </div>
+    <div class="arrow">↓</div>
+    <div class="fn">
+      <div class="top"><code>fragments(cuts, length, circular)</code><span>step 4 · measure the pieces</span></div>
+      <div class="body">
+        <pre>def fragments(cuts, length, circular):
+    if not cuts:
+        return [length]
+    if circular:
+        return [(cuts[(k + 1) % len(cuts)] - cuts[k]) % length or length
+                for k in range(len(cuts))]
+    edges = [0] + cuts + [length]
+    return [b - a for a, b in zip(edges, edges[1:]) if b > a]</pre>
+        <p class="small">Each piece is the distance from one cut to the next. On a straight line I also add the two ends of the DNA. On a circle the last piece goes around the end back to the first cut, so n cuts give n pieces (not n + 1).</p>
+        <dl class="io"><dt>in</dt><dd id="io4in"></dd><dt>out</dt><dd id="io4out"></dd></dl>
+      </div>
+    </div>
+    <div class="arrow">↓</div>
+    <div class="fn">
+      <div class="top"><code>migration(length)</code><span>step 5 · where each piece ends up on the gel</span></div>
+      <div class="body">
+        <pre>def migration(length):
+    lo, hi = math.log10(GEL_MIN), math.log10(GEL_MAX)
+    return 4 + 92 * (hi - math.log10(length)) / (hi - lo)</pre>
+        <p class="small">Same idea as lab 05: the distance a piece travels depends on log10 of its size. Small pieces run far, big ones stay near the wells.</p>
+        <dl class="io"><dt>in</dt><dd id="io5in"></dd><dt>out</dt><dd id="io5out"></dd></dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="res-h">
+    <div class="btns" style="justify-content:space-between">
+      <h2 id="res-h"><span class="n">4.</span>Results: cuts, positions, lengths</h2>
+      <button class="sm" id="copyRes">Copy table</button>
+    </div>
+    <div class="tablewrap"><table class="res" id="resTable"></table></div>
+    <div id="details" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div class="two">
+      <div>
+        <h3>Map of the cut sites</h3>
+        <canvas id="map" aria-label="Map of cut sites"></canvas>
+        <div class="legend" id="mapLegend" style="margin-top:6px"></div>
+      </div>
+      <div class="wonder" style="align-self:center"><b class="q">What I saw on the map</b><span id="mapNote"></span></div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="gel-h">
+    <h2 id="gel-h"><span class="n">5.</span>The gel</h2>
+    <p class="muted">One lane per enzyme, then all five together, then your own mix (its cuts and fragments also appear in the results table in section 4). Brighter band = more DNA mass in it (long pieces, or two pieces of the same size on top of each other).</p>
+    <div class="btns">
+      <span class="small muted" style="font-weight:600">Your mix (tick 2 or more):</span>
+      <span id="mixBox" class="btns" style="gap:12px"></span>
+      <button class="primary" id="runGel">▶ Run the gel</button>
+    </div>
+    <div class="gelwrap"><canvas id="gel" aria-label="Simulated gel"></canvas></div>
+    <div class="legend"><span><span class="dot" style="background:var(--ladder);border-radius:2px"></span>ladder (known sizes)</span><span><span class="dot" style="background:#3fcf72;border-radius:2px"></span>digest bands</span><span>Pieces under 100 bp run off the bottom.</span></div>
+  </section>
+
+  <section class="card" aria-labelledby="w-h">
+    <h2 id="w-h"><span class="n">6.</span>Things I wondered, and what I found</h2>
+    <div id="wonders" style="display:flex;flex-direction:column;gap:10px"></div>
+  </section>
+
+  <footer>DNA: NCBI RefSeq NC_005816.1 (bacterial plasmid) and NC_021202.1 (plant virus). Gel distances use a simple log model. Everything runs in your browser.</footer>
+</div>
+
+<script>
+const PLASMID={name:"NC_005816.1 Yersinia pestis biovar Microtus str. 91001 plasmid pPCP1, complete sequence",seq:"TGTAACGAACGGTGCAATAGTGATCCACACCCAACGCCTGAAATCAGATCCAGGGGGTAATCTGCTCTCCTGATTCAGGAGAGTTTATGGTCACTTTTGAGACAGTTATGGAAATTAAAATCCTGCACAAGCAGGGAATGAGTAGCCGGGCGATTGCCAGAGAACTGGGGATCTCCCGCAATACCGTTAAACGTTATTTGCAGGCAAAATCTGAGCCGCCAAAATATACGCCGCGACCTGCTGTTGCTTCACTCCTGGATGAATACCGGGATTATATTCGTCAACGCATCGCCGATGCTCATCCTTACAAAATCCCGGCAACGGTAATCGCTCGCGAGATCAGAGACCAGGGATATCGTGGCGGAATGACCATTCTCAGGGCATTCATTCGTTCTCTCTCGGTTCCTCAGGAGCAGGAGCCTGCCGTTCGGTTCGAAACTGAACCCGGACGACAGATGCAGGTTGACTGGGGCACTATGCGTAATGGTCGCTCACCGCTTCACGTGTTCGTTGCTGTTCTCGGATACAGCCGAATGCTGTACATCGAATTCACTGACAATATGCGTTATGACACGCTGGAGACCTGCCATCGTAATGCGTTCCGCTTCTTTGGTGGTGTGCCGCGCGAAGTGTTGTATGACAATATGAAAACTGTGGTTCTGCAACGTGACGCATATCAGACCGGTCAGCACCGGTTCCATCCTTCGCTGTGGCAGTTCGGCAAGGAGATGGGCTTCTCTCCCCGACTGTGTCGCCCCTTCAGGGCACAGACTAAAGGTAAGGTGGAACGGATGGTGCAGTACACCCGTAACAGTTTTTACATCCCACTAATGACTCGCCTGCGCCCGATGGGGATCACTGTCGATGTTGAAACAGCCAACCGCCACGGTCTGCGCTGGCTGCACGATGTCGCTAACCAACGAAAGCATGAAACAATCCAGGCCCGTCCCTGCGATCGCTGGCTCGAAGAGCAGCAGTCCATGCTGGCACTGCCTCCGGAGAAAAAAGAGTATGACGTGCATCTTGATGAAAATCTGGTGAACTTCGACAAACACCCCCTGCATCATCCACTCTCCATCTACGACTCATTCTGCAGAGGAGTGGCGTGATGATGGAACTGCAACATCAACGACTGATGGCGCTCGCCGGGCAGTTGCAACTGGAAAGCCTTATAAGCGCAGCGCCTGCGCTGTCACAACAGGCAGTAGACCAGGAATGGAGTTATATGGACTTCCTGGAGCATCTGCTTCATGAAGAAAAACTGGCACGTCATCAACGTAAACAGGCGATGTATACCCGAATGGCAGCCTTCCCGGCGGTGAAAACGTTCGAAGAGTATGACTTCACATTCGCCACCGGAGCACCGCAGAAGCAACTCCAGTCGTTACGCTCACTCAGCTTCATAGAACGTAATGAAAATATCGTATTACTGGGGCCATCAGGTGTGGGGAAAACCCATCTGGCAATAGCGATGGGCTATGAAGCAGTCCGTGCAGGTATCAAAGTTCGCTTCACAACAGCAGCAGATCTGTTACTTCAGTTATCTACGGCACAACGTCAGGGCCGTTATAAAACGACGCTTCAGCGTGGAGTAATGGCCCCCCGCCTGCTCATCATTGATGAAATAGGCTATCTGCCGTTCAGTCAGGAAGAAGCAAAGCTGTTCTTCCAGGTCATCGCTAAACGTTACGAAAAGAGCGCAATGATCCTGACATCCAATCTGCCGTTCGGGCAGTGGGATCAAACGTTCGCCGGTGATGCAGCACTGACCTCAGCGATGCTGGACCGTATCTTACACCACTCACATGTCGTTCAAATCAAAGGAGAAAGCTATCGACTCAGACAGAAACGAAAGGCCGGGGTTATAGCAGAAGCTAATCCTGAGTAAAACGGTGGATCAATATTGGGCCGTTGGTGGAGATATAAGTGGATCACTTTTCATCCGTCGTTGACACCCTGATGAATTCACGTGTTCACGCCTGAATAACAAGAATGCCGGAGATACGCAGTCATATTTTTTACACAATTCTCTAATCCCGACAAGGTCGTAGGTCGTTATAGGAAAATTCTTAGCACCATTCCGGAACAATCAGAACAGCAGGCCATGAACGACTGACAACATTACGAATATAAAAAACGCACCCGGGCCAGACATTCCCCCTACTGATTAAACCAGCCGGACTTGTCCACGGAACGGTCTTTTTAAACCGACACACAGTCTGAGTACAGATACATGTCACGATGATGCAGGATTAGCGGAAGAGTGTGAGCACGTTTCCGGGAACTGTGGTGAACCATAGCTCAATATTCGAGTGAGGGCATACCGGAAACGCGCTCAGATTCGTTGTAACGCGATTTTCCGTACCGGGCAATTTTTTCAGTTGTTTTTTCGTTTCATGTCGTCAGAAACGTTCTGAGCGCGTTTCCGGCATCTGATGCTACGCAAACCATCCCCATGGTCAGTTGACAGCCGGAAACACGCGGGTGTCGTTTTAGCGTATCGACGGGACGGCGTCGAGAAGCACAAAAAACAGATGTTGTACTCAGTCAGTTGTTTTACAGACAGCACTGCGGCAGATTGAAAAAGTACCGTACTTTCAGGAATGTCCAGAAACCATGTGTCAGACTTCGTTCTCCCCCTTCCGGGTGAATTTTTTTGTCATCCGTTCAGGAATCTCTTTATAACGATTACTCCATTTCAGGATTTTTTATGTGGCGTTTACTACAGGCAGGATATTCAAAGGCAAAAAAATCCCCCGGAACAGGCGGAACCCGGACAGGGGGAGAACGAATCGCTAAATAATTTTCGTAGTTGTATTTCCCATCGTTGCTACTGCAACGGGATGAATTTGCCGCAGTTTATCCTGTAAAACAATCCTGATTTACTCACACTCCACATATCACTGACGGAGCACAACGGAATAGTGAACAAACAACAACAAACTGCGCTGAATATGGCGCGATTTATCAGAAGCCAGAGCCTGATACTGCTTGAAAAACTGGATGCTCTGGATGCCGACGAGCAGGCGGCCATGTGTGAACGACTGCACGAACTCGCGGAAGAACTCCAGAACAGCATCCAGGCTCGCTTTGAAGCCGAAAGTGAAACAGGAACATAACGAAGCTCCCGGAGACGGTCACAGCTTGTCTGTGAACGGATGCCGGGAGCAGACAAGCCCGTCAGGGCGCGTCAGCGGGTTTTAGCGGGTGTCGGGGCGCAGCCATGACCCAGTCACGTAGCGATAGCGGAGTGTATACTGGCTTAGTCATGCGGCATCAGTGCGGATTGTATGAAAAGTGCACCATGTACGGTGTGAAATGCCGCACAGATGCGTAAGGAGAACATGCAGATGCCGATGCTCTTCCGCTTCCTCGCTCACTGACTCGCTGCGCTCGGTCGTTCGGCTGCGGCGAGCGGTGTCTGCTCACTCAAAAGCGGTGATACTGTTATCCACACAATCAGGGGATAACGCCGGAAAGAACATGTGAGCAAAAAACGAAGACCCCAGAAAAGGCCGCGCCGGAGGCGCTTTTTCCATAGGCTCCGCCCCCCTGACGAGCATCACAAAAATCGACGCTCAAGTCAGAGGTGGCGAAACCCGACAGGACTTAAAGATACCAGGCGTTTCCCCCCGGAAGCTCCCTCGTGCGCTCTCCTGTTCCGACCCTGCCGCTTACCGGATACCTCTCCGCCTTTCTCCCTTCGGGAAGCGTGGCGCTTTCTCATAGCTCACGCTGTTGGTATCTCAGTTCGGTGTAGGTCGTTCGCTCCAAGCTGGGCTGTGTGCACGAACCCCCCGTTCAGCCCGACCACTGCGCCTTATCCGGTAACTATCGTCTTGAGTCCAACCCGGTAAGACACGACTTTACGCCACTGGCAGCAGCCATTGGTAACTGAAAAGTGGATTTAGATACGCAGAACTCTTGAAGTTGAAGCCTTATCGCGGCTACACTGAAAGGACAGCATTTGGTATCTGTGCTCCACTTAAGCCAGCTACCACAGGTTAGAAAGCCTGAGAAACTTCTAACCTTCGAAAGAACCCACGCCTGAGAACGTGGGTTTTTTCGTTTACAGGCAGCAGATTACGCGCAGAAAAAAAGGATCTCAAGAAGATCCTTTGATCTTTTCTACTGAATTGCGCTCCCGATCAGTTCAGCAGAAGATTATGATGGGGTTCTATGGGTATTGCTGCGGTAACACCCATGTTACTTGAGGTTGTATGTAGTCTGTGTAGAATTATACACATAAGGCTTAAACTGCTCTTTTTTTTCAATATGCAATTGGAAGTTCATTGACTACATAAATAGATTATTCCAAATAATTTATTTATGTAAGAACAGGATGGGAGGGGGAATGATCTCAAAGTTATTTTGCTTGGCTCTCATATTTTTATCATCAAGTGGCCTTGCAGAAAAAAACACATATACAGCAAAAGACATCTTGCAAAACCTAGAATTAAATACCTTTGGCAATTCATTGTCTCATGGCATCTATGGGAAACAGACAACCTTCAAGCAAACCGAGTTTACAAATATTAAAAGCAACACCAAAAAACACATTGCACTTATCAATAAAGACAACTCATGGATGATATCATTAAAAATACTAGGAATTAAGAGAGATGAGTATACTGTCTGTTTTGAAGATTTCTCTCTAATAAGACCGCCAACATATGTAGCCATACATCCTCTACTTATAAAAAAAGTAAAATCTGGAAACTTTATAGTAGTGAAAGAAATAAAGAAATCTATCCCTGGTTGCACTGTATATTATCATTAATAGCAAGCCCCTCATTATTATGAGGGGCTCATGGTTATTTTAACAATCCACTATCGATATCTTTTTGCACCAGAGCGCCCTCTCGTTTACGTCTGTCAGACATTCCATCAACAATATTATTAAAAGCATTTACAAGGCCATTCCAGTCTTTTGCGATAACTTTATTCCATACTGTGGGAGCAGTTCTGGATAACTTAAACCCTTTTTGATATCCAATAGACACCAGTGCTGTACGGGTTCTCAACGGTAAATCGCTGAACCGAAGACCGATATTAGCGTCATTGAAAAGACCTTCAATCTTATGTGAGAATTTATCAATATAAATATTAGATAAGAGATGAGCTTCATTATCAGAAAGCGTCAGAGGTGCTGTTCTCACTTTATCATAAGCCTCCTTCCCTCGAAGCATATAATACCCATCAAGTCTATCTGCAATATACTGAGGGACACCGTCATTCAATAAATCCTGTTTGCTTCGCTGACCAAGGTCAACCCCGGAACCGAATGTAACACCGGTACTGTTAAAATAATCGCTACTAGGATTAGACGGAAAATGACTTGTCGGATTAAACCCTTCAAAACCATTACTGGAGAAAATATCGTGGTCAACAATATTTACCGAACGACGTAAAAATTCCTTCAGTTGACTAATATTGTCAAAGTTAATGACAGTGTTGTCCGCTAGGACGATGCGATTTCGGTTATTATTCAGAATGTCTTCGTTCTCTTTCTTATCGAGATGTTCAATAGATTCGGCAATCGTTCCCTCAAGAACCATGACACGGTAGACTTTCACACCGTCTTTTTCCTGACCTGTTTCAACAGTTATTTTCTGTTCGTAAGACACGGTCCCTTCAGTTTTTGAAATTTTACTTTCCTGGCGGATCTTATTTGAATATTCACTGTCTTTCTCCATCTCCGTATCAATCGGAAACCCCATAATGTACATCAGTTTAAAATTACTCCGGCCAGGCAGATCCACATAATGTGGTAATGCAATTGTAATCGAATTAGCTTCAAAATTTGGTCTGTAACTGCTTAATGTACTTCCGGAAAAGAGAAAAGCCGGAACACCACCTGAACCATTCACTACCATTGTATCTGACATAAAAATTCCTCTTTAACACATAAAAAAAACAATAAGTTAAAAAAATACTGTACATAAAAGCACTGTTTTTATGTACAGTAATAAAATTACGCCGCTTTATTTTCTCTGTCAATAATATGAAATTTCATTTTTGTGATCTGAATCACTCTTATAAAAATCAGGAAGGGAAGATTCGCAGCAGAAAAACAGCACCGGGTAACATCAGAAAAAAACAGAAAGGAGATAACGTGAGCAAAACAAAATCTGGTCGCCACCGACTGAGCAAAACAGACAAACGCCTGCTGGCTGCACTTGTCGTTGCCGGATACGAAGAACGGACAGCCCGTGACCTCATCCAGAAACACGTTTACACACTGACACAGGCCGACCTGCGCCATCTGGTCAGTGAAATCAGTAACGGTGTGGGACAGTCACAGGCCTACGATGCGATTTACCAGGCGAGACGCATTCGTCTCGCCCGTAAATACCTGAGCGGAAAAAAACCGGAAGGGGTGGAACCCCGGGAAGGGCAGGAACGGGAAGATTTACCATAACTCCCGTTATCAGTACCATCGGCTCAACGCTCGTTGTCGGATCTGAAAAATTCGCTCAAAAGATCATATTTCCCTGGATATTTTCCACCGTTTCTTATGTGAGAAAAGTCACATAATTCTGTCAGACGACGAGAAAACGGATATCGATTATTGTTTAATATTTTTACATTATTAAAAATGAAATTAGATAATCAGATACAAATAATATGTTTTCGTTCATGCAGAGAGATTAAGGGTGTCTAATGAAGAAAAGTTCTATTGTGGCAACCATTATAACTATTCTGTCCGGGAGTGCTAATGCAGCATCATCTCAGTTAATACCAAATATATCCCCTGACAGCTTTACAGTTGCAGCCTCCACCGGGATGCTGAGTGGAAAGTCTCATGAAATGCTTTATGACGCAGAAACAGGAAGAAAGATCAGCCAGTTAGACTGGAAGATCAAAAATGTCGCTATCCTGAAAGGTGATATATCCTGGGATCCATACTCATTTCTGACCCTGAATGCCAGGGGGTGGACGTCTCTGGCTTCCGGGTCAGGTAATATGGATGACTACGACTGGATGAATGAAAATCAATCTGAGTGGACAGATCACTCATCTCATCCTGCTACAAATGTTAATCATGCCAATGAATATGACCTCAATGTGAAAGGCTGGTTACTCCAGGATGAGAATTATAAAGCAGGTATAACAGCAGGATATCAGGAAACACGTTTCAGTTGGACAGCTACAGGTGGTTCATATAGTTATAATAATGGAGCTTATACCGGAAACTTCCCGAAAGGAGTGCGGGTAATAGGTTATAACCAGCGCTTTTCTATGCCATATATTGGACTTGCAGGCCAGTATCGCATTAATGATTTTGAGTTAAATGCATTATTTAAATTCAGCGACTGGGTTCGGGCACATGATAATGATGAGCACTATATGAGAGATCTTACTTTCCGTGAGAAGACATCCGGCTCACGTTATTATGGTACCGTAATTAACGCTGGATATTATGTCACACCTAATGCCAAAGTCTTTGCGGAATTTACATACAGTAAATATGATGAGGGCAAAGGAGGTACTCAGATCATTGATAAGAATAGTGGAGATTCTGTCTCTATTGGCGGAGATGCTGCCGGTATTTCCAATAAAAATTATACTGTGACGGCGGGTCTGCAATATCGCTTCTGAAAAATACAGATCATATCTCTCTTTTCATCCTCCCCTAGCGGGGAGGATGTCTGTGGAAAGGAGGTTGGTGTTTGACCAACCTTCAGATGTGTGAAAAATCACCTTTTTCACCATAATGACGGGGCGCTCATTCTGTTGTTTTGCCTTGACATTCTCCACGTCTTTCAGGGCATGGAGAAGGTCAAATTAGACATGGAACGCTACTCTCCTTCCTGTAGGAAGCTCAACATCCAAGCTTAATTTGCCTCCCATTGCTTCAACGTAACGCTTTAACGTCGCCAGCTTTAAATCATTTCCGCGCTGCTCCAGCTTTGTTACTGCTGGCTGGCTTATACCCATCGCCTCAGCAACTTGTTTTTGTGATAACTGGAGTTCTTCACGCATCATCTGCAAGCCGACCTCAAGAATCATCTCATCTGCCATTTCTTTAATTCGTGTCTGGCTTTCAGGTGAACGACTGGCAATCACCTCATCTAATGTTCTCATTACTTGCTCTCCAGTGTGTTCAGATGTGCTGTAAATTCATCCTCAGCTATACGCACCAGTTTTTCATAAAACCGCTTATCATTACTTTTATCTCCTGCACAAAGAACGATAGCCCGACGAATCGGATCGAACGCATAAAAGGCTCTTATCGGACGGCCAGAAAACTGAACGCGAAGCTCTTTCATATTTTTGTACCGAGAACCTTTCACGGTATCGGCATATGGCCTGGGTAACTCAGGTCCGTAAACCTGTAGCTTTTTCAAATCAGCCAAAACCTTTTCCTGAAGAGCGTCTTCTTGCTCATTTAGCCAGTCGTCAAATCGCTGGCTAAAAAGTACCATCCACATGCTCAACCCTATAACCTGTAGCTTACCCCACTAACAATATAACCTACGAGTTATATTTTCAAGAAAAGCTGGCTATTTAACATAACGGCAATTTGTACGCACCACTGAAATGCGTTCAGCGCGATCACGGCAACAGACAGGCAAAAATAGCAACAAACCTCCCGAAAAACCGCCGCGATCGCGCCTGATAAATTTTAACCTTATGCATATCTATGCAGCCAGGCGAATCACGAACGAATTGCCTGCCTGATGTAACTGAAACGGGTGTTTTTTCCTGATTTGGTGGGCGTGGAAGACGGAACATGAACGGGAAAACAGAATTCATGCCAGATGAGCGCGATCTGGCAATTAAGGCAAAACACAGCAACAAAGACACGCCAGAATCGCGCCCGGATATGTTTTAACGCGATTTTCAGACTCAGACAAATTCAGCAGAATGCTACTCCATTCACCGGGCTGATGGTGAATACATGCGTATCCAGGATGAGTACATTTCTGGCTCTGCCACAGCTCTGTCTGTTGGCAGCTTTCGCCTGTCCGGAAACCTGCTTAAAACGCTCCCGAAAGGCCTCTGAACCAGAAAGCAACAAAACACAGGCCATTAAGTAAATCGCGTTAAAACACGTCTGATGGATTGCTGCAAAAAAAAGTCCCTAATGGAGCAGGGACTGTTAAACCCAGTGAATAGCGTCTAAATTAAAGTAAGAATACGACCAGGTACTCTTCAGAAAAGAGATTAATCCACCGCACAGAATAATCAACAGTAAAAACAAACAACCCTGATTTTTTATTTTTCTTTTTTTCGATAAAAACAAAATTAAAGAAATAATTAATCAGAACATTCCTTAACTTCAGGGCATTGCCTGTGTTCCATTTTGTGATTAGTCTGAAACTTCCGAAGGTGGATAACACCCGGTATTTTTTTGCTCACATAAAGCCCCTCCTTCAGGCAGAGGGGCTTTTTCTTTGCCACCACATAAAAAAGGCCCTCACAGGAGGTGTTCTGTGAGGGCGTATGATAAGGACTGAATCGATGGTTAATATGTCTAGTCCTGACTTTTGCATCTCCGAATATAAAACCCTGTTTAACGGCATGCAAAACCAAAAAATAAAAATGTGACATCGCAATGCCAGATAATATTGACGCATGAGGGAATGCGTACCCCGACCCCTG",circ:true};
+const VIRUS={name:"NC_021202.1 Ageratum yellow vein China virus - OX1, complete genome",seq:"ACCGGATGGCCGCGATTTTTTTTAAAGTGGTCACCACCACTAACAAATGTCCTCCACTAAAAACGCTCCCTCAAAGCTTATTTAATTCAAATCCATTATAAATACTTGGTCCCCAAGTATTAAAGCTAAACATGTGGGATCCTCTTTTGAACGAGTTTCCCGAAACCGTACACGGGTTTAGGTGTATGTTAGCCATTAAGTATTTGCAATTAGTTGAAAATACATACTCTCCTGATACATTAGGGTACGATTTGCTTCGTGATTTAATTTCAGTTATTCGTGCTAGAGATTATGTCGAAGCGTCCCGCCGATATAGTCATTTCCACTCCCGCATCCAAGGTGCGTCGCCGTCTGAACTTCGACAGCCCGTATGTCAGCCGTGCTGCTGCCCCCACTGTCCTCGTCACAAACAAAAGGAGGTCATGGGTGAATCGGCCCATGTACCGAAAGCCCAGGATGTACAGGATGTATAGAAGCCCTGATGTTCCTAAGGGTTGTGAAGGCCCGTGTAAGGTGCAGTCCTATGAGGCCCGTCATGATGTGTCCCATACTGGTAAGGTCATATGTGTCACGGATGTTACACGTGGTAATGGTATTACCCATCGAGTTGGTAAGAGGTTTTGTGTGAAATCCATCTACGTCATTGGGAAGATATGGATGGATGAAAATATTAAATTGAAGAATCACACCAATACAGTTATGTTTTTTCTAGTTAGAGATCGGCGTCCGAGTGGTACTCCGATGGATTTCCAGCAGGTTTTTAATTGTTATGACAATGAGCCAAGCACTGGTACTGTGAAGAATGATCTCAGGGATAGGTTTCAAGTCATTCGGAAGTTCAACTATATGGTTACTGGTGGGCAGTATGCGTCTAAAGAACAGGCATTGGTGAAGAAGTTCATGCGGGTTAATACCCATGTTGTTTACAACCATCAAGAACAGGCAAAGTATGAGAATCATACGGAGAATGCATTATTGTTGTATATGGTTTCTACTCATGCTAGTAATCCTGTATATGCGACTTTGAAAGTCCGCATCTATTTCTATGATTCACAAATGAATTAATAAATATTGAATTTTATTATATTTGAATGTCTTACATATTCTGTGTTTTCCAATACATCCCATAATACATGATTACATGCTCTAATTACATTATTAATACTAATTACACCCAAATTATCTAAATATTTCATACATTGAACCCTAAATACTCTTAAGAAACGCCAAGTCTGAGGTTGTAAGCGAGTCCAGATCTGGAAGATCAGAAAACACTGGTGTATTCCCAACGCTTTCCTCAGGTTGTGGTTGAATTGTATTTGGATCGTTATGATGTCGTGGTTGGTGTTGAATGGTCTCTCGTGGTGCTTGGTTATCTTGAAATATAGGGGATTTTTGATTGTCCAGGTATACACGCCACTCTCGCATTGAGTTGCAGTGAGTAATTCCCCTGTGCGAAAATCCATGATTTGCACAATCTATGCCGAAGTAGTATGAGCACCCGCACGTTAGATCAACTCTCCGTCTCCGAATGGGCTTCCTCTTGGATATTCTGTGTTGCACTTTGATTGGCACCTGAGTACAATGCGCTGTTGAGGGTGATGAATTCTGCATTCTTTAATGCCCAATCTTTTAAAGCTGAATTTTTATCCTCATTCAAGTACTCTTTATATGATGATGTTGGGCCTGGATTGCAAAGGAAGATAGTTGGGATTCCACCTTTAATTTGAATTGGTTTCCCGTACTTAGTGTTGCTTTGCCAGTCCCTTTGGGCCCCCATGAATTCTTTAAAGTGCTTTAGATAATGGGGGTCTACGTCATCAATGACGTTATACCAAGCATCATTACTGTATACCTTTGGGCTTAGATCAAGATGTCCACACAAATAATTGTGTGGTCCCAGTGATCTGGCCCACATTGTTTTACCTGTACGACTATCACCTTCTATCACAATACTTTTGGGTCTCCAAGGCCGCGCAGCGGCACCACTCACATTTTCAGAAACCCACTCTTCAAGTTCTTCTGGAACTTGATCGAATGAAGAAGAAAGAAATGGACAAACAAAAACCTCTAAAGGAGGTGCAAAAATCCTATCTAAGTTAGAGTTTAAATTATGAAATTGTAAAACATAATCTTTAGGAGCTAACTCCTTAATTACTCTAAGAGCCTCAGACTTACTGCCGCTGTTAATTGCCTGGGCGTAAGCGTCATTGGCTGTCTGTTGTCCCCCTCTTGCAGAGCGTCCGTCGATCTGAAATTCTCCCCATTCGAGGGTGTCTCCGTCCTTCTCCAGGTAGGACTTGACGTCGGAGCTGGATTTAGCTCCCTGAATGTTCGGATGGAAATGTGCTGACCTGGTTGGGGAGACCAGGTCGAAGAATCTGTTATTTTGGCATTTGTATTTGCCTTCGAATTGGATAAGCACGTGGAGATGAGGGCTCCCATCTTCATGAAGTTCGCTGCAGATTTTGATGTATTTTTTATTTGTTGGGGTGTTTAGGTTTTTTATTTGGGAAAGTGCCTCTTCTTTAGTAAGAGAGCATTGTGGATAAGTGAGGAAAAAGTTTTTGGCATATATTTGAAAACGCTTAGGAGGAGCCATTGACTTGGTCAATCGGTACTCAACAAACTTGGCTATGCAATCGGTGATTGGTACTCAATATATAGTGAGTACCAAATGGCATGATTGTAATTTCTTAAAGAAATTCAAATTCCAATCGCGGCCATCCGTATAATATT",circ:true};
+const ENZ=[
+ {name:"EcoRI",site:"GAATTC",top:1,bottom:5,c:"--e1",src:"Escherichia coli RY13"},
+ {name:"BamHI",site:"GGATCC",top:1,bottom:5,c:"--e2",src:"Bacillus amyloliquefaciens H"},
+ {name:"HindIII",site:"AAGCTT",top:1,bottom:5,c:"--e3",src:"Haemophilus influenzae Rd"},
+ {name:"TaqI",site:"TCGA",top:1,bottom:3,c:"--e4",src:"Thermus aquaticus"},
+ {name:"HaeIII",site:"GGCC",top:2,bottom:2,c:"--e5",src:"Haemophilus aegyptius"}
+];
+const LADDER=[250,500,750,1000,1500,2000,2500,3000,4000,5000,6000,8000,10000],GMIN=100,GMAX=12000;
+const COMP={A:"T",T:"A",C:"G",G:"C"};
+const $=id=>document.getElementById(id);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmt=n=>n.toLocaleString("en-US");
+const revcomp=s=>s.split("").reverse().map(c=>COMP[c]).join("");
+const compl=s=>s.split("").map(c=>COMP[c]).join("");
+let dna=PLASMID,R=[],scanPos=0,anim=null;
+
+function findSites(seq,site,circ){const t=circ?seq+seq.slice(0,site.length-1):seq,h=[];let i=t.indexOf(site);while(i!==-1&&i<seq.length){h.push(i);i=t.indexOf(site,i+1);}return h;}
+function cutPositions(sites,off,L){return [...new Set(sites.map(s=>(s+off)%L))].sort((a,b)=>a-b);}
+function fragments(cuts,L,circ){if(!cuts.length)return [L];if(circ)return cuts.map((c,k)=>((cuts[(k+1)%cuts.length]-c)%L+L)%L||L);const e=[0,...cuts,L],o=[];for(let k=1;k<e.length;k++)if(e[k]>e[k-1])o.push(e[k]-e[k-1]);return o;}
+function migration(len){const lo=Math.log10(GMIN),hi=Math.log10(GMAX);return 4+92*(hi-Math.log10(len))/(hi-lo);}
+function expected(seq,site){const p={};for(const b of "ACGT")p[b]=(seq.split(b).length-1)/seq.length;return seq.length*[...site].reduce((a,b)=>a*p[b],1);}
+
+function compute(){
+  const s=dna.seq,L=s.length,circ=$("circ").checked;
+  R=ENZ.map(e=>{const sites=findSites(s,e.site,circ),cuts=cutPositions(sites,e.top,L),fr=fragments(cuts,L,circ);return {...e,sites,cuts,fr,exp:expected(s,e.site)};});
+  const all=[...new Set(R.flatMap(r=>r.cuts))].sort((a,b)=>a-b);
+  R.all={cuts:all,fr:fragments(all,L,circ)};
+}
+
+function enzymeCards(){
+  $("enzCards").innerHTML=ENZ.map(e=>{
+    const s=e.site,c=compl(s),t=e.top,b=e.bottom,blunt=t===b,lo=Math.min(t,b),hi=Math.max(t,b);
+    const topLine=`5' ${s.slice(0,t)}<span class="cut">▼</span>${s.slice(t)} 3'`;
+    const botLine=`3' ${c.slice(0,b)}<span class="cut">▲</span>${c.slice(b)} 5'`;
+    const pad=" ".repeat(Math.max(0,s.length-t+2));
+    const after1=`5'···${s.slice(0,t)}${" ".repeat(blunt?3:hi-lo+3)}${blunt?"":`<span class="ov">${s.slice(lo,hi)}</span>`}${s.slice(hi)}···3'`;
+    const after2=`3'···${c.slice(0,lo)}${blunt?"":`<span class="ov">${c.slice(lo,hi)}</span>`}${" ".repeat(blunt?3:hi-lo+3)}${c.slice(hi)}···5'`;
+    const pal=revcomp(s)===s;
+    return `<div class="ez" style="--c:var(${e.c})"><h3>${e.name}</h3>
+      <div class="strands"><span class="lb">site</span>
+${topLine}
+${botLine}
+<span class="lb">after the cut</span>
+${after1}
+${after2}</div>
+      <dl class="facts"><dt>Recognises</dt><dd><b>${s}</b> (${s.length} bp)</dd><dt>Cuts</dt><dd>${s.slice(0,t)}^${s.slice(t)} · after base ${t}</dd>
+      <dt>Ends</dt><dd>${blunt?"blunt (no overhang)":`sticky, overhang <b>${s.slice(lo,hi)}</b>`}</dd>
+      <dt>Palindrome</dt><dd>${pal?`<span class="ok">✓</span> reverse complement = ${revcomp(s)}`:"no"}</dd>
+      <dt>From</dt><dd><i>${e.src}</i></dd></dl></div>`;
+  }).join("");
+}
+
+function fnWalk(){
+  const e=R.find(r=>r.name===$("fnEnz").value),s=dna.seq,L=s.length,circ=$("circ").checked,short=a=>a.length>12?`[${a.slice(0,12).map(fmt).join(", ")}, … ${a.length} total]`:`[${a.map(fmt).join(", ")}]`;
+  $("io1in").textContent=`FASTA file "${dna.name.split(" ")[0]}"`;
+  $("io1out").textContent=`dna = "${s.slice(0,30)}…"  (${fmt(L)} letters)`;
+  $("io2in").textContent=`dna, site = "${e.site}", circular = ${circ?"True":"False"}`;
+  $("io2out").textContent=`${short(e.sites)}   ← 0-based index where "${e.site}" starts`;
+  $("io3in").textContent=`sites, offset = ${e.top}, length = ${fmt(L)}`;
+  $("io3out").textContent=`${short(e.cuts)}   ← cut happens after this many bases`;
+  $("io4in").textContent=`cuts, ${fmt(L)}, circular = ${circ?"True":"False"}`;
+  $("io4out").textContent=`${short(e.fr)}   ← sum = ${fmt(e.fr.reduce((a,b)=>a+b,0))} bp ✓`;
+  const ex=[...e.fr].sort((a,b)=>b-a).slice(0,3);
+  $("io5in").textContent=ex.map(fmt).join(" bp, ")+" bp";
+  $("io5out").textContent=ex.map(f=>`${f>=GMIN?migration(Math.min(f,GMAX*.98)).toFixed(1)+"%":"ran off"}`).join(", ")+"   ← % of the gel length from the well";
+  scanPos=0;drawScan();
+}
+
+function scanWindow(){const e=R.find(r=>r.name===$("fnEnz").value);const first=e.sites.length?e.sites[0]:20;const start=Math.max(0,Math.min(first-14,dna.seq.length-40));return {e,start,end:Math.min(dna.seq.length,start+40)};}
+function drawScan(){
+  const {e,start,end}=scanWindow(),s=dna.seq,n=e.site.length,i=start+scanPos,frame=s.slice(i,i+n),hit=frame===e.site;
+  let out=`<span class="ps">${String(start+1).padStart(5," ")}  </span>`;
+  for(let p=start;p<end;p++){if(p===i)out+=`<span class="w${hit?" hit":""}">`;out+=s[p];if(p===i+n-1)out+="</span>";}
+  out+=`\n<span class="ps">       </span>${" ".repeat(Math.max(0,i-start))}<span class="site">${e.site}</span>  ← looking for`;
+  if(hit)out+=`\n<span class="ps">       </span>${" ".repeat(i-start+e.top)}<span style="color:var(--red);font-weight:700">▲ cut</span>`;
+  $("scan").innerHTML=out;
+  $("scanmsg").innerHTML=i+n>end?"End of this window.":hit
+    ?`Position ${fmt(i+1)}: <b>${frame}</b> = <b>${e.site}</b> → <span class="ok">match!</span> The enzyme cuts after base ${e.top} of the site, so after base ${fmt(i+1+e.top-1)} of the DNA.`
+    :`Position ${fmt(i+1)}: <b>${frame}</b> ≠ <b>${e.site}</b> → move one letter right. (${scanPos+1} window${scanPos?"s":""} checked)`;
+}
+
+function results(){
+  const L=dna.seq.length;
+  $("resTable").innerHTML="<tr><th>Enzyme</th><th>Site</th><th>Cleavages</th><th>Expected by chance</th><th>Fragments</th><th>Largest</th><th>Smallest</th></tr>"+
+    R.map(r=>`<tr><td><span class="dot" style="background:var(${r.c})"></span>${r.name}</td><td class="m">${r.site}</td><td class="m"><b>${r.cuts.length}</b></td><td class="m">${r.exp.toFixed(1)}</td><td class="m">${r.fr.length}</td><td class="m">${fmt(Math.max(...r.fr))} bp</td><td class="m">${fmt(Math.min(...r.fr))} bp</td></tr>`).join("")+
+    (()=>{const m=mixResult();return m?`<tr><td><b>Your mix:</b> ${m.label}</td><td class="m">–</td><td class="m"><b>${m.cuts.length}</b></td><td class="m">–</td><td class="m">${m.fr.length}</td><td class="m">${fmt(Math.max(...m.fr))} bp</td><td class="m">${fmt(Math.min(...m.fr))} bp</td></tr>`:"";})()+
+    `<tr><td><b>All 5</b></td><td class="m">–</td><td class="m"><b>${R.all.cuts.length}</b></td><td class="m">–</td><td class="m">${R.all.fr.length}</td><td class="m">${fmt(Math.max(...R.all.fr))} bp</td><td class="m">${fmt(Math.min(...R.all.fr))} bp</td></tr>`;
+  $("details").innerHTML=R.map(r=>`<details class="lst"><summary><span class="dot" style="background:var(${r.c})"></span>${r.name}: ${r.cuts.length} cut${r.cuts.length===1?"":"s"}, positions and fragment lengths</summary>
+    <p><b>Cut after base:</b> ${r.cuts.length?r.cuts.map(fmt).join(", "):"no site found"}</p>
+    <p><b>Fragments (bp):</b> ${[...r.fr].sort((a,b)=>b-a).map(fmt).join(", ")}</p></details>`).join("")+
+    (()=>{const m=mixResult();return m?`<details class="lst" open><summary>Your mix, ${m.label}: ${m.cuts.length} cuts, positions (with which enzyme) and fragment lengths</summary>
+    <p><b>Cut after base:</b> ${m.cuts.map(c=>`${fmt(c)} (${m.owner[c].join("/")})`).join(", ")}</p>
+    <p><b>Fragments (bp):</b> ${[...m.fr].sort((a,b)=>b-a).map(fmt).join(", ")} · sum = ${fmt(m.fr.reduce((a,b)=>a+b,0))} bp ✓</p></details>`:"";})();
+  drawMap();
+  const one=R.filter(r=>r.cuts.length===1).map(r=>r.name),circ=$("circ").checked;
+  $("mapNote").textContent=(circ&&one.length?`${one.join(" and ")} cut only once. On a circle one cut doesn't make two pieces: it just opens the ring into one straight piece of ${fmt(L)} bp. `:"")+
+    `The 4-letter enzymes (TaqI, HaeIII) are spread all around, while the 6-letter ones cut only a few times. The site positions look random, there is no region where they cluster.`;
+}
+
+function drawMap(){
+  const cv=$("map"),dpr=window.devicePixelRatio||1,w=Math.min(cv.parentElement.clientWidth,420),h=w;
+  cv.style.width=w+"px";cv.style.height=h+"px";cv.width=w*dpr;cv.height=h*dpr;
+  const c=cv.getContext("2d");c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);
+  const L=dna.seq.length,cx=w/2,cy=h/2,r0=w*0.22;
+  c.strokeStyle=css("--line");c.lineWidth=8;c.beginPath();c.arc(cx,cy,r0,0,Math.PI*2);c.stroke();
+  c.font=`600 ${Math.max(11,w*0.034)}px ${css("--f-head")}`;c.fillStyle=css("--ink");c.textAlign="center";
+  c.fillText(dna.name.split(" ")[0],cx,cy-4);c.font=`12px ${css("--f-mono")}`;c.fillStyle=css("--muted");c.fillText(fmt(L)+" bp",cx,cy+14);
+  R.forEach((r,k)=>{
+    const rr=r0+10+k*w*0.035;c.strokeStyle=css(r.c);c.lineWidth=2;
+    for(const p of r.cuts){const a=p/L*Math.PI*2-Math.PI/2;c.beginPath();c.moveTo(cx+Math.cos(a)*(rr-5),cy+Math.sin(a)*(rr-5));c.lineTo(cx+Math.cos(a)*(rr+5),cy+Math.sin(a)*(rr+5));c.stroke();}
+    if(r.cuts.length<=3)for(const p of r.cuts){const a=p/L*Math.PI*2-Math.PI/2,lr=r0+w*0.2,txt=`${r.name} ${fmt(p)}`;c.fillStyle=css(r.c);c.font=`600 11px ${css("--f-body")}`;c.textAlign="left";const tw=c.measureText(txt).width;let x=cx+Math.cos(a)*lr;x=Math.cos(a)>0.2?x:Math.cos(a)<-0.2?x-tw:x-tw/2;x=Math.max(2,Math.min(w-tw-2,x));c.fillText(txt,x,Math.max(12,Math.min(h-4,cy+Math.sin(a)*lr+4)));}
+  });
+  c.fillStyle=css("--muted");c.font="11px "+css("--f-mono");c.textAlign="center";c.fillText("1",cx,cy-r0+18);
+  $("mapLegend").innerHTML=R.map(r=>`<span><span class="dot" style="background:var(${r.c})"></span>${r.name} (${r.cuts.length})</span>`).join("")+"<span>inner ring → outer ring</span>";
+}
+
+function mixResult(){
+  const mix=R.filter(r=>$("mix-"+r.name).checked);if(mix.length<2)return null;
+  const owner={};mix.forEach(r=>r.cuts.forEach(c=>(owner[c]=owner[c]||[]).push(r.name)));
+  const cuts=Object.keys(owner).map(Number).sort((a,b)=>a-b);
+  return {label:mix.map(r=>r.name).join(" + "),cuts,owner,fr:fragments(cuts,dna.seq.length,$("circ").checked),n:mix.length};
+}
+function lanes(){
+  const L=[...R.map(r=>({label:r.name,fr:r.fr})),{label:"All 5",fr:R.all.fr}];
+  const m=mixResult();if(m&&m.n<5)L.push({label:m.label.replace(/ \+ /g,"+"),fr:m.fr});
+  return L;
+}
+function drawGel(t=1){
+  const ls=lanes(),cv=$("gel"),dpr=window.devicePixelRatio||1,n=ls.length+1;
+  const w=Math.max(cv.parentElement.clientWidth-20,n*70+60),h=480;
+  cv.style.width=w+"px";cv.style.height=h+"px";cv.width=w*dpr;cv.height=h*dpr;
+  const c=cv.getContext("2d");c.setTransform(dpr,0,0,dpr,0,0);c.fillStyle=css("--gel");c.fillRect(0,0,w,h);
+  const left=52,lw=(w-left-8)/n,top=28,run=h-28-60,y=len=>top+run*migration(Math.min(len,GMAX*.98))/100*t;
+  c.font="11px "+css("--f-mono");
+  for(let k=0;k<n;k++){const x=left+k*lw;c.fillStyle=css("--well");c.fillRect(x+lw*.12,top-16,lw*.76,9);
+    c.fillStyle="#c9d6e6";c.textAlign="center";const lab=k?ls[k-1].label:"Ladder";c.font=(lab.length>10?"9.5px ":"11px ")+css("--f-mono");c.fillText(lab,x+lw/2,h-34);}
+  c.textAlign="right";c.font="11px "+css("--f-mono");
+  for(const s of LADDER){const yy=y(s);c.globalAlpha=.85;c.fillStyle=css("--ladder");c.fillRect(left+lw*.12,yy-2,lw*.76,4);c.globalAlpha=1;if(t>=1){c.fillStyle="#b8c4d4";c.fillText(fmt(s),left-6,yy+4);}}
+  ls.forEach((l,k)=>{
+    const x=left+(k+1)*lw,cnt={};l.fr.forEach(f=>cnt[f]=(cnt[f]||0)+1);
+    for(const [s,m] of Object.entries(cnt)){const sz=+s;if(sz<GMIN)continue;const yy=y(sz),a=Math.min(1,.22+.78*(sz*m)/4000);
+      c.globalAlpha=a;c.shadowColor=css("--band");c.shadowBlur=6;c.fillStyle=css("--band");c.fillRect(x+lw*.12,yy-2.5,lw*.76,5);c.shadowBlur=0;c.globalAlpha=1;}
+    const off=l.fr.filter(f=>f<GMIN).length;
+    if(off&&t>=1){c.fillStyle="#8fa3b8";c.textAlign="center";c.font="10px "+css("--f-mono");c.fillText(`+${off} ran off`,x+lw/2,h-14);}
+  });
+  c.textAlign="left";c.fillStyle="#7f93ab";c.font="12px "+css("--f-mono");c.fillText("−",10,top-8);c.fillText("bp",10,top+12);
+}
+function runGel(){if(anim)cancelAnimationFrame(anim);if(matchMedia("(prefers-reduced-motion: reduce)").matches){drawGel(1);return;}
+  const t0=performance.now(),D=2200,st=now=>{const t=Math.min(1,(now-t0)/D);drawGel(1-Math.pow(1-t,2));if(t<1)anim=requestAnimationFrame(st);};anim=requestAnimationFrame(st);}
+
+function wonders(){
+  const s=dna.seq,L=s.length,circ=$("circ").checked,gc=(s.split("G").length+s.split("C").length-2)/L*100;
+  const g=n=>R.find(r=>r.name===n),taq=g("TaqI"),hae=g("HaeIII"),eco=g("EcoRI");
+  const ecoFr=[...eco.fr].sort((a,b)=>a-b),close=ecoFr.length>1?ecoFr.reduce((m,v,i)=>i&&v-ecoFr[i-1]<m.d?{d:v-ecoFr[i-1],a:ecoFr[i-1],b:v}:m,{d:1e9}):null;
+  const W=[
+    ["Do I have to search both DNA strands?",`I thought I would need to search the second strand too. Then I checked: all 5 sites are palindromes, meaning the reverse complement is the same word (GAATTC → reverse CTTAAG → complement GAATTC). So whenever a site is on one strand, it is also on the other strand at the same place. One search is enough. The code checks this, see the ✓ on every enzyme card.`],
+    ["Why do TaqI and HaeIII cut so much more?",`A 4-letter word can be written in 4⁴ = 256 ways, a 6-letter word in 4⁶ = 4,096 ways. So in random DNA a 4-letter site shows up about every 256 bp and a 6-letter site about every 4,096 bp. For ${fmt(L)} bp that's roughly ${(L/256).toFixed(0)} versus ${(L/4096).toFixed(1)} sites. The real counts are ${taq.cuts.length} and ${hae.cuts.length} cuts versus 1 to ${Math.max(eco.cuts.length,g("BamHI").cuts.length,g("HindIII").cuts.length)}, same order of size.`],
+    ["Is the base composition important?",`Yes. This DNA is ${gc.toFixed(1)}% G+C, not 50%, so I improved the "expected" column: I multiply the real frequency of each letter in the site. For HaeIII (GGCC, all G and C) that gives ${hae.exp.toFixed(1)} expected, and I found ${hae.cuts.length}. Close.`],
+    ["But TaqI cuts much less than expected. Why?",`Expected ${taq.exp.toFixed(1)}, found only ${taq.cuts.length}: almost half. I don't know the reason yet. My guess is that bacteria avoid some short words in their DNA, maybe the ones that their own (or their viruses') restriction enzymes would cut. This is one of my questions for the professor.`,true],
+    ["What changes when the DNA is a circle?",`On a straight piece, n cuts give n + 1 pieces. On a circle, n cuts give n pieces, because the last piece wraps around through position 1. ${circ?`That is why BamHI and HindIII, with 1 cut each, give one ${fmt(L)} bp piece: the ring is just opened. `:""}I also had to glue the first letters to the end before searching, otherwise a site that crosses the end of the circle is missed. You can untick "circle" in section 1 and see the numbers change.`],
+    ["Why can't I see all the pieces on the gel?",`Two reasons I found. Small pieces (under ~100 bp) run off the end of a normal agarose gel, and they carry so little DNA mass that they are very faint anyway. Also, pieces of almost the same size end up in the same place: ${close&&close.d<60?`EcoRI makes ${fmt(close.a)} bp and ${fmt(close.b)} bp, only ${close.d} bp apart, and on the gel they look like one thick band.`:"they merge into one brighter band."} With all 5 enzymes together, ${R.all.fr.length} pieces become only ${new Set(R.all.fr.filter(f=>f>=GMIN)).size} visible bands.`],
+    ...(()=>{const o=[];const a=R.all.cuts;for(let i=1;i<a.length;i++)if(a[i]-a[i-1]<6){const x=R.filter(r=>r.cuts.includes(a[i-1])).map(r=>r.name),y=R.filter(r=>r.cuts.includes(a[i])).map(r=>r.name);if(x.join()!==y.join())o.push([a[i-1],a[i],x[0],y[0]]);}
+      if(!o.length)return [];const f=o[0],seqAt=s.slice(Math.max(0,f[0]-4),f[1]+6);
+      return [["What happens when two sites overlap?",`When I mixed enzymes I found a ${f[1]-f[0]} bp fragment. ${f[2]} cuts after base ${fmt(f[0])} and ${f[3]} after base ${fmt(f[1])}, because their sites overlap: <code>${seqAt}</code>. My program lets both enzymes cut. But in a real tube, once the first enzyme cuts there, the second one may not be able to hold on to its site anymore, so the real result could be different. I found ${o.length} place${o.length>1?"s":""} like this with all 5 enzymes.`,true]];})(),
+    ["Why do sticky ends matter?",`EcoRI, BamHI, HindIII and TaqI leave a short single strand at each end (AATT, GATC, AGCT, CG). Any two EcoRI ends can pair up again, even if they come from different DNA. That's the trick behind gene cloning: cut a plasmid and a gene with the same enzyme, mix, and they stick together. HaeIII leaves blunt ends, which don't stick on their own.`],
+    ["Why doesn't EcoRI cut the bacterium's own DNA?",`Bacteria that make EcoRI also make a second enzyme that puts a methyl group on their own GAATTC sites. The scissors skip tagged sites. Viral DNA coming in has no tags, so it gets cut. It works like a password check: same word, but only untagged copies get cut.`]
+  ];
+  $("wonders").innerHTML=W.map(([q,a,open])=>`<div class="wonder${open?" open":""}"><b class="q">${q}</b><span>${a}</span></div>`).join("");
+}
+
+function all(){
+  const L=dna.seq.length;
+  $("gname").textContent=`${dna.name} · ${fmt(L)} bp`;
+  compute();fnWalk();results();drawGel(1);wonders();
+}
+function setDna(d,btn){dna=d;$("circ").checked=d.circ!==false;document.querySelectorAll("#usePlasmid,#useVirus").forEach(b=>b.classList.toggle("on",b===btn));all();}
+
+async function readFile(file){const head=new Uint8Array(await file.slice(0,2).arrayBuffer());
+  if(head[0]===0x1f&&head[1]===0x8b)return await new Response(file.stream().pipeThrough(new DecompressionStream("gzip"))).text();return await file.text();}
+function parseFasta(t){let name="",parts=[],st=false;for(const raw of t.split(/\r?\n/)){const l=raw.trim();if(!l)continue;if(l[0]===">"){if(st)break;name=l.slice(1);st=true;}else{st=true;parts.push(l.toUpperCase());}}
+  return {name:name||"uploaded sequence",seq:parts.join("").replace(/U/g,"T").replace(/[^ACGT]/g,""),circ:false};}
+
+$("fnEnz").innerHTML=ENZ.map(e=>`<option>${e.name}</option>`).join("");
+$("mixBox").innerHTML=ENZ.map(e=>`<label class="chk"><input type="checkbox" id="mix-${e.name}"${e.name==="EcoRI"||e.name==="BamHI"?" checked":""}> ${e.name}</label>`).join("");
+ENZ.forEach(e=>$("mix-"+e.name).addEventListener("change",()=>{results();drawGel(1);}));
+$("fnEnz").addEventListener("change",fnWalk);
+$("stepBtn").addEventListener("click",()=>{const {e,start,end}=scanWindow();if(start+scanPos+e.site.length<end)scanPos++;drawScan();});
+$("jumpBtn").addEventListener("click",()=>{const {e,start}=scanWindow();scanPos=e.sites.length?e.sites[0]-start:0;drawScan();});
+$("resetBtn").addEventListener("click",()=>{scanPos=0;drawScan();});
+$("usePlasmid").addEventListener("click",e=>setDna(PLASMID,e.currentTarget));
+$("useVirus").addEventListener("click",e=>setDna(VIRUS,e.currentTarget));
+$("circ").addEventListener("change",()=>{compute();fnWalk();results();drawGel(1);wonders();});
+$("file").addEventListener("change",async ev=>{const f=ev.target.files[0];if(!f)return;try{const d=parseFasta(await readFile(f));if(d.seq.length<50)throw 0;
+  document.querySelectorAll("#usePlasmid,#useVirus").forEach(b=>b.classList.remove("on"));dna=d;$("circ").checked=false;all();}catch(e){$("gname").textContent="Couldn't read that file. Is it a FASTA file?";}});
+$("runGel").addEventListener("click",runGel);
+$("copyRes").addEventListener("click",ev=>{const b=ev.currentTarget,txt="Enzyme,Site,Cleavages,Cut positions,Fragment lengths\n"+R.map(r=>`${r.name},${r.site},${r.cuts.length},"${r.cuts.join(" ")}","${[...r.fr].sort((a,c)=>c-a).join(" ")}"`).join("\n");
+  try{navigator.clipboard.writeText(txt).then(()=>{b.textContent="Copied";setTimeout(()=>b.textContent="Copy table",1200);},()=>{});}catch(e){}});
+let rt;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{drawMap();drawGel(1);},150);});
+enzymeCards();all();
+</script>
+
+</body>
+</html>

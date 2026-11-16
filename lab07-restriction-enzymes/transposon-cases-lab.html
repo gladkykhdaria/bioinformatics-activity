@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transposon Cases Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;600&family=Source+Sans+3:wght@400;600;700&family=Roboto+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column, numbered: idea + three cases → my inverted repeats → sequence → arc map → results → coloured sequence → functions step by step → accuracy test → what I wondered. Light only, blue/white/green. */
+:root{
+  --bg:#f7f9fc; --white:#ffffff; --ink:#1b2a3a; --muted:#5b6b7d; --line:#dde4ee; --soft:#eef3fa;
+  --blue:#1f5fbf; --blue-soft:#e6eefb; --green:#1e8a4c; --green-soft:#e5f4ea; --red:#c0392b;
+  --t1:#1f5fbf; --t2:#1e8a4c; --t3:#b26b00; --t4:#7a4fc2; --t5:#0f8b8d; --t6:#c0392b;
+  --f-head:"Lexend",system-ui,sans-serif;
+  --f-body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"Roboto Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 var(--f-body)}
+.wrap{max-width:980px;margin:0 auto;padding-inline:16px;padding-block:28px 64px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-direction:column;gap:6px}
+.course{font-size:14px;color:var(--muted)}
+h1{font:600 clamp(28px,5vw,38px)/1.15 var(--f-head);margin:0;color:var(--blue)}
+.lede{margin:0;color:var(--muted);max-width:70ch;font-size:17px}
+h2{font:600 20px/1.3 var(--f-head);margin:0}
+h2 .n{color:var(--blue);margin-right:6px}
+h3{font:600 16px/1.3 var(--f-head);margin:0}
+p{margin:0}
+.muted{color:var(--muted)} .small{font-size:14px}
+.card{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.prose{max-width:72ch}
+.prose p+p{margin-top:8px}
+.cases{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.case{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.case pre{margin:0;font:13px/1.6 var(--f-mono);background:var(--soft);border-radius:6px;padding:10px;overflow-x:auto}
+.case pre .a{color:var(--t1);font-weight:600} .case pre .b{color:var(--t2);font-weight:600}
+.wonder{border-left:3px solid var(--green);background:var(--green-soft);border-radius:0 8px 8px 0;padding:12px 16px;display:flex;flex-direction:column;gap:4px;font-size:15px}
+.wonder b.q{color:var(--green);font-family:var(--f-head);font-weight:600}
+.wonder.open{border-left-color:var(--blue);background:var(--blue-soft)}
+.wonder.open b.q{color:var(--blue)}
+.btns{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:13.5px;color:var(--muted);font-weight:600}
+input[type=number],select{font:15px var(--f-mono);color:var(--ink);background:var(--white);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}
+textarea{font:13.5px var(--f-mono);color:var(--ink);background:var(--white);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-height:90px;resize:vertical;word-break:break-all}
+button{font:600 15px var(--f-body);border-radius:8px;padding:9px 16px;cursor:pointer;border:1px solid var(--line);background:var(--white);color:var(--ink)}
+button:hover{border-color:var(--blue);color:var(--blue)}
+button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+button.primary:hover{background:#184c99;color:#fff}
+button.sm{font-size:13.5px;padding:6px 12px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+details summary{cursor:pointer;font-weight:600;color:var(--blue)}
+details[open] summary{margin-bottom:10px}
+.banner{border-radius:10px;padding:16px 20px;display:flex;flex-direction:column;gap:4px}
+.banner.ok{background:var(--green-soft);border:1px solid #bfe2cc}
+.banner.part{background:var(--blue-soft);border:1px solid #c6d6f2}
+.banner b{font:600 21px/1.25 var(--f-head)}
+.banner.ok b{color:var(--green)} .banner.part b{color:var(--blue)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table.res{border-collapse:collapse;width:100%;font-size:14.5px}
+table.res th,table.res td{text-align:left;padding:7px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.res th{font-size:13px;font-weight:600;color:var(--muted);background:var(--soft)}
+table.res td.m{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.ok-t{color:var(--green);font-weight:600} .bad-t{color:var(--red);font-weight:600}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+canvas{display:block;width:100%}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:14px;color:var(--muted)}
+.seq{font:13px/2.1 var(--f-mono);background:var(--soft);border-radius:8px;padding:12px 14px;white-space:pre-wrap;word-break:break-all;overflow-x:auto}
+.seq .pos{color:#9aa9bb;user-select:none}
+.seq .ir{color:#fff;border-radius:2px}
+.fn{border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:0}
+.fn .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;padding:10px 14px;background:var(--soft);border-bottom:1px solid var(--line)}
+.fn .top code{font:500 14px var(--f-mono);color:var(--blue);background:none;padding:0}
+.fn .top span{font-size:13px;color:var(--muted)}
+.fn .body{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.fn pre{margin:0;font:12.5px/1.55 var(--f-mono);background:#f4f6fa;border:1px solid var(--line);border-radius:6px;padding:10px 12px;overflow-x:auto}
+.io{display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;font-size:14px;align-items:baseline;margin:0}
+.io dt{font:600 12px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.io dd{margin:0;font:13.5px var(--f-mono);word-break:break-word}
+.arrow{text-align:center;color:var(--muted);font-size:20px;line-height:1}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.stats div{background:var(--soft);border-radius:8px;padding:10px 12px}
+.stats b{display:block;font:600 19px var(--f-head);font-variant-numeric:tabular-nums}
+.stats span{font-size:13px;color:var(--muted)}
+code{font:13.5px var(--f-mono);background:var(--soft);padding:1px 5px;border-radius:4px}
+footer{font-size:13.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="course">Bioinformatics · FILS, POLITEHNICA Bucharest · Lab 07, part 2</div>
+    <h1>Transposon Cases Lab</h1>
+    <p class="lede">A random DNA sequence with transposons placed in all three tricky ways: one after the other, one inside another, and two crossing each other. The program finds each one from its inverted repeats and reports where it starts, where it ends and how long it is.</p>
+  </header>
+
+  <section class="card" aria-labelledby="idea-h">
+    <h2 id="idea-h"><span class="n">0.</span>The idea</h2>
+    <div class="prose">
+      <p>A transposon is marked by an inverted repeat (IR) at each end: the right end is the left end read backwards on the other strand. In lab 06 my transposons were always nicely separated. This time the task is harder. Transposons can sit inside other transposons or overlap them, and the distance between the two IRs has a minimum of 10 bases but no maximum.</p>
+      <p>That broke two things in my old program. It deleted any result that overlapped another one, and it stopped looking after 150 bases. So I rewrote the search to keep every pair of inverted repeats it finds, and to describe how they relate to each other.</p>
+    </div>
+    <div class="cases">
+      <div class="case"><h3>One after the other</h3><pre><span class="a">[A&gt;</span>.....<span class="a">&lt;A]</span>   <span class="b">[B&gt;</span>.....<span class="b">&lt;B]</span></pre><p class="small muted">A ends before B starts.</p></div>
+      <div class="case"><h3>Nested</h3><pre><span class="a">[A&gt;</span>.. <span class="b">[B&gt;</span>...<span class="b">&lt;B]</span> ..<span class="a">&lt;A]</span></pre><p class="small muted">B is completely inside A. In real genomes this happens when a transposon jumps into another one.</p></div>
+      <div class="case"><h3>Overlapping</h3><pre><span class="a">[A&gt;</span>.. <span class="b">[B&gt;</span>.. <span class="a">&lt;A]</span> ..<span class="b">&lt;B]</span></pre><p class="small muted">B starts inside A but ends after it. The two cross.</p></div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="ir-h">
+    <h2 id="ir-h"><span class="n">1.</span>The inverted repeats I chose</h2>
+    <p class="muted small">Six IRs of 11–12 bases, one for each transposon. I generated candidates and kept only the ones that pass three checks (see "Things I wondered").</p>
+    <div class="tablewrap"><table class="res" id="irTable"></table></div>
+  </section>
+
+  <section class="card" aria-labelledby="mk-h">
+    <h2 id="mk-h"><span class="n">2.</span>The sequence</h2>
+    <div class="form">
+      <label for="seed">Random seed<input type="number" id="seed" value="7"></label>
+      <label for="minIr">Min IR length<select id="minIr"><option>10</option><option selected>11</option><option>12</option></select></label>
+      <label for="minGap">Min distance between IRs<input type="number" id="minGap" value="10" min="1"></label>
+    </div>
+    <div class="btns">
+      <button class="primary" id="make">Make sequence &amp; detect</button>
+      <button class="sm" id="reseed">New random seed</button>
+    </div>
+    <details>
+      <summary>Or paste your own sequence</summary>
+      <label for="own" class="muted small">DNA (A, C, G, T). FASTA header lines are ignored.</label>
+      <textarea id="own" spellcheck="false" placeholder="ACGT..."></textarea>
+      <div class="btns" style="margin-top:8px"><button id="detectOwn">Detect in this sequence</button></div>
+    </details>
+  </section>
+
+  <div class="banner" id="banner"></div>
+
+  <section class="card" aria-labelledby="map-h">
+    <div>
+      <h2 id="map-h"><span class="n">3.</span>Map</h2>
+      <p class="muted small" id="mapSub"></p>
+    </div>
+    <canvas id="map" aria-label="Arc map of the transposons"></canvas>
+    <div class="legend"><span>Arc inside another arc = <b>nested</b></span><span>Arcs that cross = <b>overlapping</b></span><span>Coloured blocks on the line = inverted repeats</span></div>
+  </section>
+
+  <section class="card" aria-labelledby="res-h">
+    <div class="btns" style="justify-content:space-between">
+      <h2 id="res-h"><span class="n">4.</span>Position and length of each transposon</h2>
+      <button class="sm" id="copy">Copy table</button>
+    </div>
+    <div class="tablewrap"><table class="res" id="resTable"></table></div>
+  </section>
+
+  <section class="card" aria-labelledby="seq-h">
+    <h2 id="seq-h"><span class="n">5.</span>The sequence, coloured</h2>
+    <p class="muted small">Only the inverted repeats are coloured, from what the detector found. The parts in between are the transposon bodies and the random DNA.</p>
+    <div class="seq" id="seqview"></div>
+  </section>
+
+  <section class="card" aria-labelledby="fn-h">
+    <h2 id="fn-h"><span class="n">6.</span>How the program works, function by function</h2>
+    <p class="muted">Same functions as in <code>part2_detect_transposons.py</code>. Pick a transposon to see its real data go through them.</p>
+    <div class="btns"><span class="small muted" style="font-weight:600">Transposon:</span><select id="fnPick" aria-label="Transposon for the walkthrough"></select></div>
+    <div class="fn"><div class="top"><code>build_index(seq, k)</code><span>step 1 · a dictionary of all short words</span></div><div class="body">
+      <pre>def build_index(seq, k):
+    index = {}
+    for j in range(len(seq) - k + 1):
+        index.setdefault(seq[j:j + k], []).append(j)
+    return index</pre>
+      <p class="small">Every 11-letter word in the sequence is stored with the positions where it appears. Later I can ask "where is this word?" and get the answer at once, without reading the whole sequence again.</p>
+      <dl class="io"><dt>in</dt><dd id="f1in"></dd><dt>out</dt><dd id="f1out"></dd></dl></div></div>
+    <div class="arrow">↓</div>
+    <div class="fn"><div class="top"><code>detect(seq, min_ir, min_gap)</code><span>step 2 · find pairs of inverted repeats</span></div><div class="body">
+      <pre>for i in range(len(seq) - min_ir + 1):
+    for j in index.get(revcomp(seq[i:i + min_ir]), ()):
+        if j - (i + min_ir) &lt; min_gap:
+            continue
+        s, e, m = grow(seq, i, j + min_ir, min_gap)</pre>
+      <p class="small">For each word, I make its reverse complement (read it backwards and swap A↔T, C↔G) and look it up. If it appears at least 10 bases further on, the two words could be the two ends of a transposon. There is no upper limit, so a transposon can be as long as the whole sequence.</p>
+      <dl class="io"><dt>in</dt><dd id="f2in"></dd><dt>out</dt><dd id="f2out"></dd></dl></div></div>
+    <div class="arrow">↓</div>
+    <div class="fn"><div class="top"><code>grow(seq, s, e, min_gap)</code><span>step 3 · find the real edges</span></div><div class="body">
+      <pre>while s &gt; 0 and e &lt; n and seq[s - 1] == COMP[seq[e]]:
+    s -= 1
+    e += 1
+m = 0
+while (e - m - 1) - (s + m + 1) &gt;= min_gap and seq[s + m] == COMP[seq[e - 1 - m]]:
+    m += 1</pre>
+      <p class="small">The 11-letter match may only be part of the IR. So I move outwards while the letters still pair up (this finds the real start and end), then inwards to measure how long the IR is. Many small matches inside the same IR all grow into the same transposon, and I keep it only once.</p>
+      <dl class="io"><dt>in</dt><dd id="f3in"></dd><dt>out</dt><dd id="f3out"></dd></dl></div></div>
+    <div class="arrow">↓</div>
+    <div class="fn"><div class="top"><code>relation(a, b)</code><span>step 4 · nested, overlapping or separate?</span></div><div class="body">
+      <pre>if a.start &lt; b.start and b.end &lt; a.end:            return "contains"
+if b.start &lt; a.start and a.end &lt; b.end:            return "inside"
+if a.start &lt; b.start &lt;= a.end &lt; b.end:             return "overlaps"
+otherwise:                                          return None   # one after the other</pre>
+      <p class="small">Only the start and end of the two transposons are compared. This is the same logic you use to check whether two time intervals in a calendar overlap.</p>
+      <dl class="io"><dt>in</dt><dd id="f4in"></dd><dt>out</dt><dd id="f4out"></dd></dl></div></div>
+  </section>
+
+  <section class="card" aria-labelledby="acc-h">
+    <div>
+      <h2 id="acc-h"><span class="n">7.</span>How reliable is it?</h2>
+      <p class="muted small">Make 1,000 new random sequences, each with all three cases, and count how often every transposon is found with the exact start and end.</p>
+    </div>
+    <div class="btns"><button id="test">Run 1,000 tests</button><span class="muted small" id="testStatus"></span></div>
+    <div class="stats" id="testStats"></div>
+  </section>
+
+  <section class="card" aria-labelledby="w-h">
+    <h2 id="w-h"><span class="n">8.</span>Things I wondered, and what I found</h2>
+    <div id="wonders" style="display:flex;flex-direction:column;gap:10px"></div>
+  </section>
+
+  <footer>Simulated sequence with perfect inverted repeats. Everything runs in your browser.</footer>
+</div>
+
+<script>
+const COMP={A:"T",T:"A",C:"G",G:"C"};
+const rc=s=>{let o="";for(let i=s.length-1;i>=0;i--)o+=COMP[s[i]]||"N";return o;};
+const IRS={IR1:"ATATGCTGGGT",IR2:"AGAGGTCGAGGT",IR3:"CCAATTCTCATT",IR4:"GTGTTTCGGAAC",IR5:"TTGCGTTTTAGG",IR6:"ATGTCTTAGTG"};
+const $=id=>document.getElementById(id);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const col=k=>css("--t"+(k%6+1));
+let cur=null;
+
+function rng(seed){let a=seed>>>0;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+function build(seed){
+  const r=rng(seed),ri=(a,b)=>a+Math.floor(r()*(b-a+1)),parts=[],mask=[],truth=[];let len=0;
+  const add=(t,ir)=>{const s=len;parts.push(t);for(let i=0;i<t.length;i++)mask.push(ir);len+=t.length;return s;};
+  const rnd=n=>{let s="";for(let i=0;i<n;i++)s+="ACGT"[Math.floor(r()*4)];add(s,false);};
+  const te=(ir,core)=>{const s=add(ir,true);rnd(core);add(rc(ir),true);return [s,len];};
+  const rec=(name,s,e,cs)=>truth.push({name,ir:IRS[name],start:s+1,end:e,length:e-s,case:cs});
+  rnd(ri(20,40));let [s,e]=te(IRS.IR1,ri(10,40));rec("IR1",s,e,"one after the other");
+  rnd(ri(15,40));[s,e]=te(IRS.IR2,ri(100,220));rec("IR2",s,e,"one after the other (long)");
+  rnd(ri(15,40));const os=add(IRS.IR3,true);rnd(ri(5,20));[s,e]=te(IRS.IR4,ri(10,35));rec("IR4",s,e,"nested (inside IR3)");
+  rnd(ri(5,20));add(rc(IRS.IR3),true);rec("IR3",os,len,"nested (contains IR4)");
+  rnd(ri(15,40));const s5=add(IRS.IR5,true);rnd(ri(5,15));const s6=add(IRS.IR6,true);rnd(ri(5,15));add(rc(IRS.IR5),true);const e5=len;
+  rnd(ri(5,15));add(rc(IRS.IR6),true);const e6=len;rec("IR5",s5,e5,"overlapping (with IR6)");rec("IR6",s6,e6,"overlapping (with IR5)");rnd(ri(20,40));
+  const q=parts.join("").split("");let ch=true;
+  while(ch){ch=false;for(const t of truth){const a=t.start-1,b=t.end;if(a>0&&b<q.length&&q[a-1]===COMP[q[b]]){const pos=!mask[a-1]?a-1:b;if(mask[pos])continue;const other=pos===a-1?COMP[q[b]]:COMP[q[a-1]];const opts="ACGT".split("").filter(c=>c!==other);q[pos]=opts[Math.floor(r()*opts.length)];ch=true;}}}
+  truth.sort((x,y)=>x.start-y.start);
+  return {seq:q.join(""),truth};
+}
+
+function buildIndex(seq,k){const m=new Map();for(let j=0;j+k<=seq.length;j++){const w=seq.substr(j,k),a=m.get(w);a?a.push(j):m.set(w,[j]);}return m;}
+function grow(seq,s,e,gap){const n=seq.length;while(s>0&&e<n&&seq[s-1]===COMP[seq[e]]){s--;e++;}let m=0;while((e-m-1)-(s+m+1)>=gap&&seq[s+m]===COMP[seq[e-1-m]])m++;return [s,e,m];}
+function detect(seq,k=11,gap=10){
+  const idx=buildIndex(seq,k),found=new Map();let pairs=0;
+  for(let i=0;i+k<=seq.length;i++){const hits=idx.get(rc(seq.substr(i,k)));if(!hits)continue;
+    for(const j of hits){if(j-(i+k)<gap)continue;pairs++;const [s,e,m]=grow(seq,i,j+k,gap);const key=s+","+e;
+      if(m>=k&&!found.has(key))found.set(key,{start:s+1,end:e,length:e-s,ir:seq.substr(s,m),irR:seq.slice(e-m,e)});}}
+  const out=[...found.values()].sort((a,b)=>a.start-b.start||b.end-a.end);out.pairs=pairs;out.words=idx.size;return out;
+}
+function relation(a,b){if(a.start<b.start&&b.end<a.end)return "contains";if(b.start<a.start&&a.end<b.end)return "inside";
+  if((a.start<b.start&&b.start<=a.end&&a.end<b.end)||(b.start<a.start&&a.start<=b.end&&b.end<a.end))return "overlaps";return null;}
+function describe(f){f.forEach((a,k)=>{const n=[];f.forEach((b,j)=>{if(j!==k){const r=relation(a,b);if(r)n.push(`${r} #${j+1}`);}});a.rel=n.length?n.join(", "):"on its own";});return f;}
+
+function render(seq,found,truth,label){
+  cur={seq,found,truth};
+  const tk=truth?new Set(truth.map(t=>t.start+","+t.end)):null,exact=truth?found.filter(f=>tk.has(f.start+","+f.end)).length:0;
+  const b=$("banner");
+  if(truth){const perfect=exact===truth.length&&found.length===truth.length;b.className="banner "+(perfect?"ok":"part");
+    b.innerHTML=`<b>${perfect?"✓ ":""}Found ${found.length} transposons: ${exact} of ${truth.length} with exact start and end</b><span class="muted">${label} · ${seq.length} bases · ${found.length-exact} false hit${found.length-exact===1?"":"s"} · checked against the answer key after detection.</span>`;}
+  else{b.className="banner part";b.innerHTML=`<b>Found ${found.length} transposon${found.length===1?"":"s"}</b><span class="muted">${label} · ${seq.length} bases · no answer key for a pasted sequence.</span>`;}
+  $("mapSub").textContent=truth?"Arcs above the line: what the detector found. Arcs below: the answer key. They should mirror each other.":"Arcs: what the detector found.";
+  drawMap();
+  const caseOf=f=>{if(!truth)return "";const t=truth.find(t=>t.start===f.start&&t.end===f.end);return t?t.case:"";};
+  $("resTable").innerHTML="<tr><th>#</th><th>Start</th><th>End</th><th>Length</th><th>Left IR</th><th>Right IR</th><th>Position</th>"+(truth?"<th>Answer key</th>":"")+"</tr>"+
+    (found.length?found.map((f,k)=>`<tr><td><span class="dot" style="background:${col(k)}"></span>${k+1}</td><td class="m">${f.start}</td><td class="m">${f.end}</td><td class="m"><b>${f.length}</b></td><td class="m">${f.ir}</td><td class="m">${f.irR}</td><td>${f.rel}</td>${truth?(tk.has(f.start+","+f.end)?`<td class="ok-t">✓ ${caseOf(f)}</td>`:`<td class="bad-t">✗ not in key</td>`):""}</tr>`).join(""):`<tr><td colspan="8" class="muted">No transposons found.</td></tr>`);
+  if(truth){const fk=new Set(found.map(f=>f.start+","+f.end));truth.filter(t=>!fk.has(t.start+","+t.end)).forEach(t=>{$("resTable").innerHTML+=`<tr><td>–</td><td class="m">${t.start}</td><td class="m">${t.end}</td><td class="m">${t.length}</td><td colspan="3" class="muted">${t.case}</td><td class="bad-t">✗ missed</td></tr>`;});}
+  const cls=new Array(seq.length).fill(-1);
+  found.forEach((f,k)=>{const s=f.start-1,e=f.end,m=f.ir.length;for(let p=s;p<s+m;p++)if(cls[p]<0)cls[p]=k;for(let p=e-m;p<e;p++)if(cls[p]<0)cls[p]=k;});
+  let h="",open=-1;
+  for(let p=0;p<seq.length;p++){if(p%60===0){if(open>=0){h+="</span>";open=-1;}h+=(p?"\n":"")+`<span class="pos">${String(p+1).padStart(4," ")}  </span>`;}
+    if(cls[p]!==open){if(open>=0)h+="</span>";if(cls[p]>=0)h+=`<span class="ir" style="background:${col(cls[p])}">`;open=cls[p];}h+=seq[p];}
+  if(open>=0)h+="</span>";$("seqview").innerHTML=h;
+  $("fnPick").innerHTML=found.map((f,k)=>`<option value="${k}">#${k+1} · ${f.start}–${f.end}</option>`).join("");
+  fnWalk();wonders();
+}
+
+function drawMap(){
+  if(!cur)return;const {seq,found,truth}=cur,cv=$("map"),dpr=window.devicePixelRatio||1,w=cv.clientWidth||900;
+  const up=150,down=truth?110:0,h=up+down+30;cv.style.height=h+"px";cv.width=w*dpr;cv.height=h*dpr;
+  const c=cv.getContext("2d");c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);
+  const pad=12,L=seq.length,x=p=>pad+p/L*(w-2*pad),base=up;
+  c.fillStyle=css("--line");c.fillRect(pad,base-3,w-2*pad,6);
+  const arcs=(items,dir,max,colorFor,labels)=>{
+    items.forEach((t,k)=>{const x1=x(t.start-1),x2=x(t.end),span=x2-x1,hh=Math.min(max,18+span*0.55)*dir;
+      c.strokeStyle=colorFor(t,k);c.lineWidth=2.2;c.beginPath();c.moveTo(x1,base);c.bezierCurveTo(x1,base-hh*1.33,x2,base-hh*1.33,x2,base);c.stroke();
+      const m=(t.ir||IRS[t.name]||"").length;c.fillStyle=colorFor(t,k);c.fillRect(x1,base-4,Math.max(3,x(t.start-1+m)-x1),8);c.fillRect(x(t.end-m),base-4,Math.max(3,x2-x(t.end-m)),8);
+      if(labels){c.font="600 12px "+css("--f-body");c.textAlign="center";c.fillText(labels(t,k),(x1+x2)/2,base-hh-4*dir+(dir<0?12:0));}});
+  };
+  arcs(found,1,up-22,(t,k)=>col(k),(t,k)=>"#"+(k+1));
+  if(truth){const order=truth.map(t=>{const i=found.findIndex(f=>f.start===t.start&&f.end===t.end);return i;});
+    arcs(truth,-1,down-18,(t,k)=>order[k]>=0?col(order[k]):css("--muted"),t=>t.name);
+    c.fillStyle=css("--muted");c.font="11px "+css("--f-mono");c.textAlign="left";c.fillText("detected",pad,14);c.fillText("answer key",pad,h-6);}
+  c.fillStyle=css("--muted");c.font="11px "+css("--f-mono");c.textAlign="right";c.fillText(L+" nt",w-pad,base+18);
+}
+
+function fnWalk(){
+  if(!cur||!cur.found.length){["f1in","f1out","f2in","f2out","f3in","f3out","f4in","f4out"].forEach(id=>$(id).textContent="–");return;}
+  const {seq,found}=cur,k=+$("minIr").value,gap=+$("minGap").value,f=found[+$("fnPick").value||0],i=f.start-1,w=seq.substr(i,k),r=rc(w);
+  const j=seq.indexOf(r,i+k+gap);
+  $("f1in").textContent=`seq (${seq.length} letters), k = ${k}`;
+  $("f1out").textContent=`dictionary with ${found.words??"–"} different words, e.g. "${w}" → [${i}]`;
+  $("f2in").textContent=`word at ${i}: ${w} → reverse complement ${r}`;
+  $("f2out").textContent=j>=0?`found at ${j}, gap = ${j-(i+k)} bases (≥ ${gap} ✓, no maximum)`:`(the pair was found from a shorter match inside the IR)`;
+  $("f3in").textContent=`start = ${i}, end = ${j>=0?j+k:f.end}`;
+  $("f3out").textContent=`start ${f.start}, end ${f.end}, length ${f.length}, IR = ${f.ir} (${f.ir.length} bases)`;
+  const others=found.map((b,q)=>[q,relation(f,b)]).filter(([q,r])=>q!==found.indexOf(f)&&r);
+  $("f4in").textContent=`#${found.indexOf(f)+1} (${f.start}–${f.end}) compared with the other ${found.length-1}`;
+  $("f4out").textContent=others.length?others.map(([q,r])=>`${r} #${q+1}`).join(", "):"None for all of them → one after the other";
+}
+
+function make(){const seed=+$("seed").value||0,{seq,truth}=build(seed);render(seq,describe(detectNow(seq)),truth,`Random sequence, seed ${seed}`);}
+function detectNow(seq){const d=detect(seq,+$("minIr").value,Math.max(1,+$("minGap").value||10));const out=describe(d);out.words=d.words;return out;}
+
+function runTests(){
+  $("testStatus").textContent="Running…";$("testStats").innerHTML="";
+  setTimeout(()=>{const t0=performance.now(),k=+$("minIr").value,gap=Math.max(1,+$("minGap").value||10);let ok=0,tot=0,fp=0,nest=0,nestOk=0,ov=0,ovOk=0,len=0;
+    for(let s=0;s<1000;s++){const {seq,truth}=build(50000+s),f=detect(seq,k,gap),fk=new Set(f.map(x=>x.start+","+x.end));len+=seq.length;
+      for(const t of truth){const hit=fk.has(t.start+","+t.end);tot++;if(hit)ok++;if(t.case.startsWith("nested")){nest++;if(hit)nestOk++;}if(t.case.startsWith("overlap")){ov++;if(hit)ovOk++;}}
+      const tk=new Set(truth.map(t=>t.start+","+t.end));fk.forEach(x=>{if(!tk.has(x))fp++;});}
+    const avg=len/1000,expFp=(avg*avg/2)*0.75/Math.pow(4,k);
+    $("testStatus").textContent=`Done in ${((performance.now()-t0)/1000).toFixed(1)} s`;
+    $("testStats").innerHTML=[[(ok/tot*100).toFixed(2)+"%","exact start and end"],[`${nestOk}/${nest}`,"nested found"],[`${ovOk}/${ov}`,"overlapping found"],[`${(fp/1000).toFixed(3)}`,"false hits per sequence"],[expFp.toFixed(3),"false hits expected by chance"]]
+      .map(([v,l])=>`<div><b>${v}</b><span>${l}</span></div>`).join("");},30);
+}
+
+function wonders(){
+  const {seq}=cur,L=seq.length,k=+$("minIr").value,exp=n=>(L*L/2)*0.75/Math.pow(4,n);
+  const W=[
+    ["Why did my old program fail here?",`In lab 06, whenever two results overlapped, it kept only the better one. That's exactly wrong for nested and overlapping transposons, because there both results are real. It also only looked up to 150 bases ahead. Now nothing is deleted and there is no upper limit.`],
+    ["How did I choose the inverted repeats?",`I generated random 10–12 letter words and kept only those that pass three checks: (1) the word is not its own reverse complement, otherwise one IR could pair with itself; (2) no two IRs share an 8-letter piece, so the left end of one transposon can never pair with the right end of another; (3) a balanced G+C content, so they look like normal DNA.`],
+    ["What if two transposons had the same IR?",`In real genomes many copies of the same transposon family share the same IRs. Then the left IR of copy 1 also pairs with the right IR of copy 2, and the program would report a giant fake transposon going from copy 1 to copy 2. That's why I gave each transposon its own IR. With real data you would need more clues, like the direct repeats from lab 06.`,true],
+    ["\"No maximum distance\" has a price",`If any two places in the sequence can pair, random DNA starts producing fake hits. The number of possible pairs grows with the length squared, about L²/2 = ${Math.round(L*L/2).toLocaleString()} here. The chance that two random ${k}-letter words are reverse complements is 1/4^${k}. So I expect about ${exp(k).toFixed(3)} fake transposons per sequence with IRs of ${k} letters. With 10 letters it would be ${exp(10).toFixed(3)}, 4 times more. That's why the default minimum is 11. My IRs are 11–12 letters long, so none of them are lost. The test in section 7 confirms these numbers.`],
+    ["How do I make sure the edges are exact?",`When I grow a match outwards, the letter just before the transposon could by chance pair with the letter just after it, and the transposon would look one letter longer on each side. When I build the sequence, I check this and change that random letter if needed. Without this, about 1 in 4 transposons would come out one letter too wide.`],
+    ["Why do some IRs look longer than I made them?",`When I grow inwards, the first letters of the body can by chance pair with the last letters of the body, so the IR in the table looks longer. Usually it is 1 letter. Sometimes the body even has a small palindrome exactly in its middle, and then the IR looks much longer. The start and end are still exactly right, and only the IR column changes. I decided this is fine, because the task asks for the position and length of the transposon, not of the IR.`],
+    ["Do nested transposons exist in real life?",`Yes. The maize genome is full of them, with transposons that jumped into other transposons again and again, like layers. Barbara McClintock discovered transposons in maize in the first place. Overlapping ones, where two cross each other, are much rarer in real genomes. Here they are a test of whether the program can handle them.`]
+  ];
+  $("wonders").innerHTML=W.map(([q,a,o])=>`<div class="wonder${o?" open":""}"><b class="q">${q}</b><span>${a}</span></div>`).join("");
+}
+
+$("irTable").innerHTML="<tr><th>Name</th><th>Left IR (5'→3')</th><th>Right IR = reverse complement</th><th>Length</th><th>Not its own reverse complement</th></tr>"+
+  Object.entries(IRS).map(([n,s],k)=>`<tr><td><span class="dot" style="background:${col(k)}"></span>${n}</td><td class="m">${s}</td><td class="m">${rc(s)}</td><td class="m">${s.length}</td><td class="ok-t">${rc(s)!==s?"✓":"✗"}</td></tr>`).join("");
+$("make").addEventListener("click",make);
+$("reseed").addEventListener("click",()=>{$("seed").value=Math.floor(Math.random()*100000);make();});
+["seed","minIr","minGap"].forEach(id=>$(id).addEventListener("change",()=>{if(cur&&!cur.truth){render(cur.seq,detectNow(cur.seq),null,"Pasted sequence");}else make();}));
+$("detectOwn").addEventListener("click",()=>{const seq=$("own").value.split(/\r?\n/).filter(l=>!l.trim().startsWith(">")).join("").toUpperCase().replace(/U/g,"T").replace(/[^ACGT]/g,"");
+  if(seq.length<40){$("banner").className="banner part";$("banner").innerHTML="<b>Sequence too short</b><span class='muted'>Paste at least 40 bases of DNA.</span>";return;}
+  render(seq,detectNow(seq),null,"Pasted sequence");});
+$("fnPick").addEventListener("change",fnWalk);
+$("test").addEventListener("click",runTests);
+$("copy").addEventListener("click",ev=>{if(!cur)return;const b=ev.currentTarget,txt="Number,Start,End,Length,Left IR,Right IR,Position\n"+cur.found.map((f,k)=>[k+1,f.start,f.end,f.length,f.ir,f.irR,`"${f.rel}"`].join(",")).join("\n");
+  try{navigator.clipboard.writeText(txt).then(()=>{b.textContent="Copied";setTimeout(()=>b.textContent="Copy table",1200);},()=>{});}catch(e){}});
+let rt;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(drawMap,150);});
+make();
+</script>
+
+</body>
+</html>

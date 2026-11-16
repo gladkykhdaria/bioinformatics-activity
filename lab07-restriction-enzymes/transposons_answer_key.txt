@@ -1,0 +1,7 @@
+name	start	end	length	inverted_repeat	case
+IR1	31	79	49	ATATGCTGGGT	one after the other
+IR2	100	314	215	AGAGGTCGAGGT	one after the other (long)
+IR3	351	437	87	CCAATTCTCATT	nested (contains IR4)
+IR4	372	410	39	GTGTTTCGGAAC	nested (inside IR3)
+IR5	457	509	53	TTGCGTTTTAGG	overlapping (with IR6)
+IR6	479	525	47	ATGTCTTAGTG	overlapping (with IR5)
