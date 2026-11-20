@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Needleman-Wunsch Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;600&family=Source+Sans+3:wght@400;600;700&family=Roboto+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column, numbered: idea → inputs → matrix (fill step by step, click a cell) → traceback → alignment → functions → scoring comparison → what I wondered. Light only, blue/white/green. */
+:root{
+  --bg:#f7f9fc; --white:#ffffff; --ink:#1b2a3a; --muted:#5b6b7d; --line:#dde4ee; --soft:#eef3fa;
+  --blue:#1f5fbf; --blue-soft:#e6eefb; --green:#1e8a4c; --green-soft:#e5f4ea; --amber:#b26b00; --amber-soft:#fbf0dc;
+  --f-head:"Lexend",system-ui,sans-serif;
+  --f-body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"Roboto Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 var(--f-body)}
+.wrap{max-width:1000px;margin:0 auto;padding-inline:16px;padding-block:28px 64px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-direction:column;gap:6px}
+.course{font-size:14px;color:var(--muted)}
+h1{font:600 clamp(28px,5vw,38px)/1.15 var(--f-head);margin:0;color:var(--blue)}
+.lede{margin:0;color:var(--muted);max-width:70ch;font-size:17px}
+h2{font:600 20px/1.3 var(--f-head);margin:0}
+h2 .n{color:var(--blue);margin-right:6px}
+h3{font:600 16px/1.3 var(--f-head);margin:0}
+p{margin:0}
+.muted{color:var(--muted)} .small{font-size:14px}
+.card{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.prose{max-width:72ch} .prose p+p{margin-top:8px}
+.map-table{width:100%;border-collapse:collapse;font-size:15px}
+.map-table td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.map-table td:first-child{font-weight:600;white-space:nowrap}
+.map-table td:last-child{font-family:var(--f-mono);font-size:13.5px;color:var(--blue)}
+@media (max-width:600px){.map-table tr{display:grid;padding:6px 0;border-bottom:1px solid var(--line)}.map-table td{border:none;padding:1px 4px}}
+.wonder{border-left:3px solid var(--green);background:var(--green-soft);border-radius:0 8px 8px 0;padding:12px 16px;display:flex;flex-direction:column;gap:4px;font-size:15px}
+.wonder b.q{color:var(--green);font-family:var(--f-head);font-weight:600}
+.wonder.open{border-left-color:var(--blue);background:var(--blue-soft)}
+.wonder.open b.q{color:var(--blue)}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:640px){.form,.form3{grid-template-columns:1fr}}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13.5px;color:var(--muted);font-weight:600;min-width:0}
+input[type=text],input[type=number]{font:15px var(--f-mono);color:var(--ink);background:var(--white);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;text-transform:uppercase}
+.btns{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+button{font:600 15px var(--f-body);border-radius:8px;padding:9px 16px;cursor:pointer;border:1px solid var(--line);background:var(--white);color:var(--ink)}
+button:hover{border-color:var(--blue);color:var(--blue)}
+button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+button.primary:hover{background:#184c99;color:#fff}
+button.sm{font-size:13.5px;padding:6px 12px}
+button.on{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
+button:focus-visible,input:focus-visible,td:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.matwrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--white)}
+table.mat{border-collapse:separate;border-spacing:2px;font:12.5px var(--f-mono);margin:4px}
+table.mat th{color:var(--muted);font-weight:500;padding:2px 4px;text-align:center}
+table.mat th.s1{color:var(--blue);font-weight:600}
+table.mat th.s2{color:var(--green);font-weight:600}
+table.mat td{width:38px;height:34px;text-align:center;border-radius:4px;cursor:pointer;position:relative;font-variant-numeric:tabular-nums;border:2px solid transparent}
+table.mat td .ar{position:absolute;top:1px;left:3px;font-size:9px;opacity:.7}
+table.mat td.empty{color:transparent;background:var(--soft)!important}
+table.mat td.path{border-color:var(--green);box-shadow:inset 0 0 0 1px var(--green);font-weight:700}
+table.mat td.cur{border-color:var(--amber);box-shadow:0 0 0 2px var(--amber)}
+table.mat td.src{border-color:var(--amber);border-style:dashed}
+.calc{font:14px/1.7 var(--f-mono);background:var(--amber-soft);border-radius:8px;padding:12px 14px;white-space:pre-wrap;min-height:5.4em}
+.calc b{color:var(--amber)}
+.aln{font:18px/1.5 var(--f-mono);background:var(--soft);border-radius:8px;padding:14px 16px;overflow-x:auto;white-space:pre;letter-spacing:.06em}
+.aln .m{color:var(--green);font-weight:600} .aln .x{color:var(--blue);font-weight:600;background:var(--blue-soft)} .aln .g{color:var(--muted)} .aln .lb{color:var(--muted);font-size:13px;letter-spacing:0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.stats div{background:var(--soft);border-radius:8px;padding:10px 12px}
+.stats b{display:block;font:600 20px var(--f-head);font-variant-numeric:tabular-nums}
+.stats span{font-size:13px;color:var(--muted)}
+.fn{border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:0}
+.fn .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;padding:10px 14px;background:var(--soft);border-bottom:1px solid var(--line)}
+.fn .top code{font:500 14px var(--f-mono);color:var(--blue);background:none;padding:0}
+.fn .top span{font-size:13px;color:var(--muted)}
+.fn .body{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.fn pre{margin:0;font:12.5px/1.55 var(--f-mono);background:#f4f6fa;border:1px solid var(--line);border-radius:6px;padding:10px 12px;overflow-x:auto}
+.io{display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;font-size:14px;align-items:baseline;margin:0}
+.io dt{font:600 12px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.io dd{margin:0;font:13.5px var(--f-mono);word-break:break-word}
+.arrow{text-align:center;color:var(--muted);font-size:20px;line-height:1}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table.res{border-collapse:collapse;width:100%;font-size:14.5px}
+table.res th,table.res td{text-align:left;padding:7px 12px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:top}
+table.res th{font-size:13px;font-weight:600;color:var(--muted);background:var(--soft)}
+table.res td.m{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+table.res td pre{margin:0;font:13px/1.35 var(--f-mono)}
+code{font:13.5px var(--f-mono);background:var(--soft);padding:1px 5px;border-radius:4px}
+footer{font-size:13.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="course">Bioinformatics · FILS, POLITEHNICA Bucharest · Lab 08</div>
+    <h1>Needleman-Wunsch Lab</h1>
+    <p class="lede">Aligning two DNA sequences from end to end (global alignment). The page fills the score matrix one cell at a time, follows the path back, and shows the alignment, so every step of the algorithm can be seen.</p>
+  </header>
+
+  <section class="card" aria-labelledby="idea-h">
+    <h2 id="idea-h"><span class="n">0.</span>The idea</h2>
+    <div class="prose">
+      <p>Two DNA sequences that come from the same ancestor slowly change: a letter gets replaced (a mismatch), or a letter is added or lost (a gap). Aligning means writing them one under the other so that the shared letters line up, and then counting how similar they are.</p>
+      <p>There are far too many ways to place the gaps to try them all. Needleman and Wunsch (1970) found a trick: the best alignment of the full sequences is built from the best alignments of their beginnings. So you fill a table with those small answers and reuse them. In computer science this is called <b>dynamic programming</b>.</p>
+    </div>
+    <table class="map-table">
+      <tr><td>Two sequences</td><td>Two strings to compare</td><td>s1, s2</td></tr>
+      <tr><td>Match / mismatch</td><td>Same letter / different letter at the same place</td><td>score(a, b)</td></tr>
+      <tr><td>Insertion or deletion</td><td>A letter facing nothing</td><td>"-" and the gap score</td></tr>
+      <tr><td>Score matrix</td><td>Best score for every pair of beginnings</td><td>M[i][j]</td></tr>
+      <tr><td>Each cell</td><td>The best of three ways to get there</td><td>max(diag, up, left)</td></tr>
+      <tr><td>Traceback</td><td>Following the breadcrumbs back</td><td>while i &gt; 0 or j &gt; 0</td></tr>
+    </table>
+  </section>
+
+  <section class="card" aria-labelledby="in-h">
+    <h2 id="in-h"><span class="n">1.</span>Sequences and scores</h2>
+    <div class="form">
+      <label class="f" for="s1">S1<input type="text" id="s1" value="ACCGTGAAGCCAATAC" spellcheck="false"></label>
+      <label class="f" for="s2">S2<input type="text" id="s2" value="AGCGTGCAGCCAATAC" spellcheck="false"></label>
+    </div>
+    <div class="form3">
+      <label class="f" for="ma">Match<input type="number" id="ma" value="1"></label>
+      <label class="f" for="mi">Mismatch<input type="number" id="mi" value="-1"></label>
+      <label class="f" for="ga">Gap<input type="number" id="ga" value="-1"></label>
+    </div>
+    <div class="btns">
+      <button class="primary" id="go">Align</button>
+      <span class="small muted" style="font-weight:600">Presets:</span>
+      <button class="sm" data-p="1,-1,-1">+1 / −1 / −1 (standard)</button>
+      <button class="sm" data-p="1,-1,0">gap = 0</button>
+      <button class="sm" data-p="1,-1,-2">gap = −2</button>
+      <button class="sm" id="reset">Lab sequences</button>
+    </div>
+    <p class="small muted" id="inMsg"></p>
+  </section>
+
+  <section class="card" aria-labelledby="mat-h">
+    <div>
+      <h2 id="mat-h"><span class="n">2.</span>The score matrix</h2>
+      <p class="muted small">S1 goes down, S2 goes across. Each cell holds the best score for aligning the first <i>i</i> letters of S1 with the first <i>j</i> letters of S2. Darker blue = higher score. Click any cell to see how it was calculated. The small arrow shows where its best value came from.</p>
+    </div>
+    <div class="btns">
+      <button id="stepBtn">Fill next cell →</button>
+      <button id="rowBtn">Fill next row</button>
+      <button id="fillAll">Fill all</button>
+      <button id="trace">Trace back</button>
+      <button class="sm" id="clearBtn">Start over</button>
+    </div>
+    <div class="matwrap"><table class="mat" id="mat"></table></div>
+    <div class="calc" id="calc" aria-live="polite"></div>
+  </section>
+
+  <section class="card" aria-labelledby="aln-h">
+    <h2 id="aln-h"><span class="n">3.</span>The alignment</h2>
+    <div class="aln" id="aln"></div>
+    <p class="small muted"><span style="color:var(--green);font-weight:600">|</span> match · <span style="color:var(--blue);font-weight:600">.</span> mismatch (a letter was replaced) · <span style="color:var(--muted)">-</span> gap (a letter was inserted or lost)</p>
+    <div class="stats" id="stats"></div>
+  </section>
+
+  <section class="card" aria-labelledby="fn-h">
+    <h2 id="fn-h"><span class="n">4.</span>How the program works, function by function</h2>
+    <p class="muted">The same functions as in <code>needleman_wunsch.py</code>, with the real values for the sequences above.</p>
+    <div class="fn"><div class="top"><code>init_matrix(n, m, gap)</code><span>step 1 · first row and first column</span></div><div class="body">
+      <pre>for i in range(n + 1):
+    M[i][0] = i * gap
+for j in range(m + 1):
+    M[0][j] = j * gap</pre>
+      <p class="small">Aligning the first <i>i</i> letters of S1 with nothing means <i>i</i> gaps, so the first column is 0, gap, 2·gap, … The same goes for the first row.</p>
+      <dl class="io"><dt>in</dt><dd id="f1in"></dd><dt>out</dt><dd id="f1out"></dd></dl></div></div>
+    <div class="arrow">↓</div>
+    <div class="fn"><div class="top"><code>fill(s1, s2, match, mismatch, gap)</code><span>step 2 · every other cell</span></div><div class="body">
+      <pre>diag = M[i - 1][j - 1] + score(s1[i - 1], s2[j - 1], match, mismatch)
+up   = M[i - 1][j] + gap
+left = M[i][j - 1] + gap
+M[i][j] = max(diag, up, left)</pre>
+      <p class="small">There are only three ways to reach a cell. Diagonal: put the two letters together (match or mismatch). From above: S1's letter faces a gap. From the left: S2's letter faces a gap. Keep the best one. Each cell only needs its three neighbours, which are already filled.</p>
+      <dl class="io"><dt>in</dt><dd id="f2in"></dd><dt>out</dt><dd id="f2out"></dd></dl></div></div>
+    <div class="arrow">↓</div>
+    <div class="fn"><div class="top"><code>traceback(s1, s2, M, …)</code><span>step 3 · read the alignment back</span></div><div class="body">
+      <pre>while i &gt; 0 or j &gt; 0:
+    if M[i][j] == M[i-1][j-1] + score(...):  take both letters, go ↖
+    elif M[i][j] == M[i-1][j] + gap:         S1 letter + "-",  go ↑
+    else:                                    "-" + S2 letter,  go ←</pre>
+      <p class="small">Start in the bottom-right corner (the final score) and ask: which neighbour did this value come from? Step there and write down the letters. Repeat until the top-left corner. The letters are collected backwards, so they are reversed at the end.</p>
+      <dl class="io"><dt>in</dt><dd id="f3in"></dd><dt>out</dt><dd id="f3out"></dd></dl></div></div>
+  </section>
+
+  <section class="card" aria-labelledby="cmp-h">
+    <div>
+      <h2 id="cmp-h"><span class="n">5.</span>Same sequences, different scores</h2>
+      <p class="muted small">The algorithm is always the same. Only the scores change, and the "best" alignment changes with them.</p>
+    </div>
+    <div class="tablewrap"><table class="res" id="cmp"></table></div>
+  </section>
+
+  <section class="card" aria-labelledby="w-h">
+    <h2 id="w-h"><span class="n">6.</span>Things I wondered, and what I found</h2>
+    <div id="wonders" style="display:flex;flex-direction:column;gap:10px"></div>
+  </section>
+
+  <footer>Needleman, S. B. &amp; Wunsch, C. D. (1970), Journal of Molecular Biology 48(3). Everything runs in your browser.</footer>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let S1="",S2="",MA=1,MI=-1,GA=-1,M=[],W=[],filled=0,path=null,sel=null,traceTimer=null;
+const sc=(a,b)=>a===b?MA:MI;
+
+function nw(s1,s2,ma,mi,ga){
+  const n=s1.length,m=s2.length,M=[],W=[];
+  for(let i=0;i<=n;i++){M.push(new Array(m+1).fill(0));W.push(new Array(m+1).fill(0));M[i][0]=i*ga;W[i][0]=1;}
+  for(let j=0;j<=m;j++){M[0][j]=j*ga;W[0][j]=1;}
+  for(let i=1;i<=n;i++)for(let j=1;j<=m;j++){const d=M[i-1][j-1]+(s1[i-1]===s2[j-1]?ma:mi),u=M[i-1][j]+ga,l=M[i][j-1]+ga,b=Math.max(d,u,l);M[i][j]=b;
+    W[i][j]=(d===b?W[i-1][j-1]:0)+(u===b?W[i-1][j]:0)+(l===b?W[i][j-1]:0);}
+  let i=n,j=m,t="",bt="";const p=[[i,j]];
+  while(i>0||j>0){if(i>0&&j>0&&M[i][j]===M[i-1][j-1]+(s1[i-1]===s2[j-1]?ma:mi)){t=s1[i-1]+t;bt=s2[j-1]+bt;i--;j--;}
+    else if(i>0&&M[i][j]===M[i-1][j]+ga){t=s1[i-1]+t;bt="-"+bt;i--;}else{t="-"+t;bt=s2[j-1]+bt;j--;}p.push([i,j]);}
+  return {M,W,top:t,bot:bt,path:p.reverse()};
+}
+const mid=(a,b)=>[...a].map((x,k)=>x===b[k]?"|":(x==="-"||b[k]==="-")?" ":".").join("");
+const total=()=>(S1.length)*(S2.length);
+const cellIndex=(i,j)=>(i-1)*S2.length+(j-1);
+const isFilled=(i,j)=>i===0||j===0||cellIndex(i,j)<filled;
+
+function readInputs(){
+  const clean=s=>s.toUpperCase().replace(/[^ACGT]/g,"");
+  S1=clean($("s1").value);S2=clean($("s2").value);MA=+$("ma").value||0;MI=+$("mi").value||0;GA=+$("ga").value||0;
+  if(!S1.length||!S2.length){$("inMsg").textContent="Both sequences need at least one letter (A, C, G or T).";return false;}
+  if(S1.length>40||S2.length>40){S1=S1.slice(0,40);S2=S2.slice(0,40);$("inMsg").textContent="Cut to 40 letters each so the matrix stays readable.";}else $("inMsg").textContent="";
+  document.querySelectorAll("[data-p]").forEach(b=>b.classList.toggle("on",b.dataset.p===`${MA},${MI},${GA}`));
+  return true;
+}
+
+function arrowOf(i,j){if(i===0&&j===0)return "";if(i===0)return "←";if(j===0)return "↑";
+  const d=M[i-1][j-1]+sc(S1[i-1],S2[j-1]),u=M[i-1][j]+GA,b=M[i][j];return d===b?"↖":u===b?"↑":"←";}
+
+function color(v){const vals=M.flat(),lo=Math.min(...vals),hi=Math.max(...vals),t=hi===lo?.5:(v-lo)/(hi-lo);
+  const l=96-t*52;return `hsl(216 62% ${l}%)`;}
+
+function drawMatrix(){
+  const n=S1.length,m=S2.length,onPath=new Set((path||[]).map(p=>p.join(",")));
+  let h=`<tr><th></th><th>-</th>${[...S2].map(c=>`<th class="s2">${c}</th>`).join("")}</tr>`;
+  for(let i=0;i<=n;i++){h+=`<tr><th class="s1">${i?S1[i-1]:"-"}</th>`;
+    for(let j=0;j<=m;j++){const f=isFilled(i,j),v=M[i][j],cls=[];if(!f)cls.push("empty");if(onPath.has(i+","+j))cls.push("path");
+      if(sel&&sel[0]===i&&sel[1]===j)cls.push("cur");
+      if(sel&&sel[0]>0&&sel[1]>0&&((i===sel[0]-1&&j===sel[1]-1)||(i===sel[0]-1&&j===sel[1])||(i===sel[0]&&j===sel[1]-1)))cls.push("src");
+      const dark=f&&color(v).match(/(\d+)%\)$/)&&+color(v).match(/(\d+(\.\d+)?)%\)$/)[1]<58;
+      h+=`<td class="${cls.join(" ")}" data-i="${i}" data-j="${j}" tabindex="0" style="background:${f?color(v):""};color:${dark?"#fff":"var(--ink)"}">${f?`<span class="ar">${arrowOf(i,j)}</span>${v}`:"·"}</td>`;}
+    h+="</tr>";}
+  $("mat").innerHTML=h;
+}
+
+function explain(i,j){
+  sel=[i,j];
+  if(i===0&&j===0){$("calc").innerHTML=`<b>Cell (0,0)</b>: nothing aligned with nothing → score 0. This is where every path starts.`;return;}
+  if(i===0||j===0){const k=i||j;$("calc").innerHTML=`<b>Cell (${i},${j})</b>: the first ${k} letter${k>1?"s":""} of ${i?"S1":"S2"} facing only gaps → ${k} × (${GA}) = <b>${M[i][j]}</b>`;return;}
+  if(!isFilled(i,j)){$("calc").innerHTML=`<b>Cell (${i},${j})</b> is not filled yet. Press "Fill next cell" until you get here.`;return;}
+  const a=S1[i-1],b=S2[j-1],s=sc(a,b),d=M[i-1][j-1]+s,u=M[i-1][j]+GA,l=M[i][j-1]+GA,best=Math.max(d,u,l);
+  const mk=(v)=>v===best?`<b>${v}</b> ✓`:`${v}`;
+  $("calc").innerHTML=`<b>Cell (${i},${j})</b>: S1 letter <b>${a}</b> vs S2 letter <b>${b}</b> → ${a===b?"match":"mismatch"} (${s>=0?"+":""}${s})
+  ↖ diag = ${M[i-1][j-1]} ${s>=0?"+":"−"} ${Math.abs(s)} = ${mk(d)}     (put ${a} and ${b} together)
+  ↑ up   = ${M[i-1][j]} ${GA>=0?"+":"−"} ${Math.abs(GA)} = ${mk(u)}     (${a} faces a gap)
+  ← left = ${M[i][j-1]} ${GA>=0?"+":"−"} ${Math.abs(GA)} = ${mk(l)}     (${b} faces a gap)
+  max = <b>${best}</b>${[d,u,l].filter(v=>v===best).length>1?"   (a tie: more than one way gives the best score)":""}`;
+}
+
+function step(k=1){
+  if(filled>=total())return;filled=Math.min(total(),filled+k);path=null;
+  const c=filled-1,i=Math.floor(c/S2.length)+1,j=c%S2.length+1;explain(i,j);drawMatrix();
+  if(filled>=total())$("calc").innerHTML+=`\n\nMatrix complete. The final score is in the bottom-right corner: <b>${M[S1.length][S2.length]}</b>. Now press "Trace back".`;
+}
+
+function traceAnim(){
+  if(traceTimer)clearInterval(traceTimer);
+  filled=total();const full=nw(S1,S2,MA,MI,GA).path,rev=[...full].reverse();sel=null;
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches){path=full;drawMatrix();traceMsg(rev.length-1,rev);return;}
+  let k=0;path=[];
+  traceTimer=setInterval(()=>{path.push(rev[k]);drawMatrix();traceMsg(k,rev);k++;if(k>=rev.length){clearInterval(traceTimer);traceTimer=null;}},140);
+}
+function traceMsg(k,rev){
+  const [i,j]=rev[k];if(k===rev.length-1){$("calc").innerHTML=`<b>Traceback done.</b> The green path goes from (${S1.length},${S2.length}) back to (0,0) in ${rev.length-1} steps. Every ↖ step puts two letters together, every ↑ or ← step adds a gap.`;return;}
+  const [pi,pj]=rev[k+1]||[0,0],dir=pi===i-1&&pj===j-1?"↖ diagonal: "+S1[i-1]+" with "+S2[j-1]:pi===i-1?"↑ up: "+S1[i-1]+" with a gap":"← left: a gap with "+S2[j-1];
+  $("calc").innerHTML=`<b>At (${i},${j})</b>, value ${M[i][j]}. Which neighbour gave this value? → ${dir}`;
+}
+
+function alignment(){
+  const r=nw(S1,S2,MA,MI,GA),m=mid(r.top,r.bot);
+  const paint=(s,o)=>[...s].map((c,k)=>c==="-"?`<span class="g">-</span>`:c===o[k]?`<span class="m">${c}</span>`:o[k]==="-"?c:`<span class="x">${c}</span>`).join("");
+  $("aln").innerHTML=`<span class="lb">S1 </span>${paint(r.top,r.bot)}\n<span class="lb">   </span>${m.replace(/\|/g,'<span class="m">|</span>').replace(/\./g,'<span class="x">.</span>')}\n<span class="lb">S2 </span>${paint(r.bot,r.top)}`;
+  const mt=(m.match(/\|/g)||[]).length,mm=(m.match(/\./g)||[]).length,gp=(m.match(/ /g)||[]).length;
+  $("stats").innerHTML=[[r.M[S1.length][S2.length],"score"],[`${(mt/r.top.length*100).toFixed(1)}%`,`identity (${mt}/${r.top.length})`],[mt,"matches"],[mm,"mismatches"],[gp,"gaps"],[r.W[S1.length][S2.length].toLocaleString(),"equally good alignments"]]
+    .map(([v,l])=>`<div><b>${v}</b><span>${l}</span></div>`).join("");
+  return r;
+}
+
+function functions(r){
+  const n=S1.length,m=S2.length;
+  $("f1in").textContent=`n = ${n}, m = ${m}, gap = ${GA}`;
+  $("f1out").textContent=`first column [${Array.from({length:Math.min(n+1,6)},(_,i)=>i*GA).join(", ")}${n>5?", …":""}], first row the same, a ${n+1} × ${m+1} table`;
+  const i=Math.min(2,n),j=Math.min(2,m),d=r.M[i-1][j-1]+sc(S1[i-1],S2[j-1]),u=r.M[i-1][j]+GA,l=r.M[i][j-1]+GA;
+  $("f2in").textContent=`example cell (${i},${j}): ${S1[i-1]} vs ${S2[j-1]}`;
+  $("f2out").textContent=`max(diag ${d}, up ${u}, left ${l}) = ${r.M[i][j]}  ·  ${n*m} cells filled like this, final score ${r.M[n][m]}`;
+  $("f3in").textContent=`start at (${n},${m}) with score ${r.M[n][m]}`;
+  $("f3out").textContent=`${r.path.length-1} steps → "${r.top}" / "${r.bot}"`;
+}
+
+function compare(){
+  const sets=[[1,-1,-1,"standard"],[1,-1,0,"gaps are free"],[1,-1,-2,"gaps cost more"],[1,0,-1,"mismatches are free"],[2,-1,-2,"other common choice"]];
+  $("cmp").innerHTML="<tr><th>Match / mismatch / gap</th><th>Alignment</th><th>Score</th><th>Gaps</th><th>Equally good</th></tr>"+sets.map(([a,b,c,lab])=>{
+    const r=nw(S1,S2,a,b,c),m=mid(r.top,r.bot),g=(m.match(/ /g)||[]).length,cur=a===MA&&b===MI&&c===GA;
+    return `<tr${cur?' style="background:var(--blue-soft)"':""}><td class="m">${a>=0?"+":""}${a} / ${b} / ${c}<br><span class="muted" style="font-family:var(--f-body);font-size:13px">${lab}</span></td><td><pre>${r.top}\n${m}\n${r.bot}</pre></td><td class="m">${r.M[S1.length][S2.length]}</td><td class="m">${g}</td><td class="m">${r.W[S1.length][S2.length].toLocaleString()}</td></tr>`;}).join("");
+}
+
+function delannoy(a,b){const D=[];for(let i=0;i<=a;i++){D.push([]);for(let j=0;j<=b;j++)D[i].push(i===0||j===0?1:D[i-1][j]+D[i][j-1]+D[i-1][j-1]);}return D[a][b];}
+function wonders(r){
+  const n=S1.length,m=S2.length,all=delannoy(n,m),g0=nw(S1,S2,1,-1,0),m1=mid(r.top,r.bot);
+  const diffs=[...m1].map((c,k)=>c==="."?`position ${k+1}: ${r.top[k]} → ${r.bot[k]}`:null).filter(Boolean);
+  const kind=(a,b)=>{const pur="AG";return (pur.includes(a)===pur.includes(b))?"transition":"transversion";};
+  const W=[
+    ["Why not just try every possible alignment?",`I counted them. Two sequences of ${n} and ${m} letters can be aligned in ${all.toLocaleString()} different ways (if you allow any gaps). Needleman-Wunsch fills only ${(n+1)*(m+1)} cells and still finds the best one. The trick is that each cell reuses the answers of its three neighbours instead of starting from zero.`],
+    ["What do the differences mean biologically?",diffs.length?`With the standard scores there are no gaps, only ${diffs.length} letter swap${diffs.length>1?"s":""}: ${diffs.join(", ")}. These look like point mutations (substitutions), not insertions or deletions. ${diffs.map(d=>{const [x,y]=d.split(": ")[1].split(" → ");return `${x}→${y} is a ${kind(x,y)}`;}).join(", ")}. A transversion swaps a purine (A, G) with a pyrimidine (C, T). In real DNA that happens less often than a transition, but my scoring treats every mismatch the same.`:`With these scores there are no mismatches left, only matches and gaps.`],
+    ["Why does gap = 0 give a strange result?",`With gap = 0, a gap costs nothing but a mismatch costs −1. So the program would rather open two gaps than accept one mismatch: it writes C against "-" and "-" against G instead of C against G. The result has ${(mid(g0.top,g0.bot).match(/ /g)||[]).length} gaps, and there are ${g0.W[n][m]} different alignments with the same best score. So the scores are not neutral. They are a choice about which kind of mutation we think is more likely.`,true],
+    ["When there is a tie, which way does it go?",`Sometimes two of the three ways give the same maximum. My traceback always checks diagonal first, then up, then left. Another order can give a different alignment with the same score. That's why I also count how many alignments are equally good (the last box in section 3): each cell adds up the counts of the neighbours that tie for the best.`],
+    ["Why is the first row 0, −1, −2, …?",`Cell (0, j) means: the first j letters of S2 aligned with nothing from S1. The only way to do that is j gaps, so the score is j × gap. Without this first row and column, the cells next to them would have nothing to build on.`],
+    ["Global or local?",`Needleman-Wunsch is global: it always aligns both sequences from the first letter to the last. That fits here, because both are 16 letters long and similar all the way through. If I wanted to find a short similar piece inside two long, mostly different sequences, I would need a local alignment (Smith-Waterman), which lets the score drop back to 0 and start again.`]
+  ];
+  $("wonders").innerHTML=W.map(([q,a,o])=>`<div class="wonder${o?" open":""}"><b class="q">${q}</b><span>${a}</span></div>`).join("");
+}
+
+function run(fillAll=true){
+  if(traceTimer){clearInterval(traceTimer);traceTimer=null;}
+  if(!readInputs())return;
+  const r=nw(S1,S2,MA,MI,GA);M=r.M;W=r.W;filled=fillAll?total():0;path=fillAll?r.path:null;sel=null;
+  $("calc").innerHTML=fillAll?`Click any cell to see how it was calculated, or press "Start over" and fill the matrix one cell at a time.`:`Only the first row and column are filled (step 1). Press "Fill next cell" to calculate cell (1,1).`;
+  drawMatrix();const res=alignment();functions(res);compare();wonders(res);
+}
+
+$("go").addEventListener("click",()=>run(true));
+document.querySelectorAll("[data-p]").forEach(b=>b.addEventListener("click",()=>{const [a,c,d]=b.dataset.p.split(",");$("ma").value=a;$("mi").value=c;$("ga").value=d;run(true);}));
+$("reset").addEventListener("click",()=>{$("s1").value="ACCGTGAAGCCAATAC";$("s2").value="AGCGTGCAGCCAATAC";$("ma").value=1;$("mi").value=-1;$("ga").value=-1;run(true);});
+$("stepBtn").addEventListener("click",()=>step(1));
+$("rowBtn").addEventListener("click",()=>{const left=S2.length-(filled%S2.length);step(filled>=total()?0:left);});
+$("fillAll").addEventListener("click",()=>{step(total());});
+$("clearBtn").addEventListener("click",()=>run(false));
+$("trace").addEventListener("click",traceAnim);
+$("mat").addEventListener("click",e=>{const td=e.target.closest("td");if(!td)return;explain(+td.dataset.i,+td.dataset.j);drawMatrix();});
+$("mat").addEventListener("keydown",e=>{if(e.key!=="Enter"&&e.key!==" ")return;const td=e.target.closest("td");if(!td)return;e.preventDefault();explain(+td.dataset.i,+td.dataset.j);drawMatrix();});
+["s1","s2","ma","mi","ga"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter")run(true);}));
+run(true);
+</script>
+
+</body>
+</html>
