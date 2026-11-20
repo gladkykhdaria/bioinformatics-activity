@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DNA Patterns Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;600&family=Source+Sans+3:wght@400;600;700&family=Roboto+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column, numbered like the board: idea → check the two functions on S → sliding window explorer → pattern chart → centers chart → functions → check vs original PromKappa code → what I wondered. Light only, blue/white/green. */
+:root{
+  --bg:#f7f9fc; --white:#ffffff; --ink:#1b2a3a; --muted:#5b6b7d; --line:#dde4ee; --soft:#eef3fa;
+  --blue:#1f5fbf; --blue-soft:#e6eefb; --green:#1e8a4c; --green-soft:#e5f4ea; --red:#c0392b; --amber:#b26b00; --amber-soft:#fbf0dc;
+  --f-head:"Lexend",system-ui,sans-serif;
+  --f-body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"Roboto Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 var(--f-body)}
+.wrap{max-width:1000px;margin:0 auto;padding-inline:16px;padding-block:28px 64px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-direction:column;gap:6px}
+.course{font-size:14px;color:var(--muted)}
+h1{font:600 clamp(28px,5vw,38px)/1.15 var(--f-head);margin:0;color:var(--blue)}
+.lede{margin:0;color:var(--muted);max-width:70ch;font-size:17px}
+h2{font:600 20px/1.3 var(--f-head);margin:0}
+h2 .n{color:var(--blue);margin-right:6px}
+h3{font:600 16px/1.3 var(--f-head);margin:0}
+p{margin:0}
+.muted{color:var(--muted)} .small{font-size:14px}
+.card{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.prose{max-width:72ch} .prose p+p{margin-top:8px}
+.map-table{width:100%;border-collapse:collapse;font-size:15px}
+.map-table td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.map-table td:first-child{font-weight:600;white-space:nowrap}
+.map-table td:last-child{font-family:var(--f-mono);font-size:13.5px;color:var(--blue)}
+@media (max-width:600px){.map-table tr{display:grid;padding:6px 0;border-bottom:1px solid var(--line)}.map-table td{border:none;padding:1px 4px}}
+.wonder{border-left:3px solid var(--green);background:var(--green-soft);border-radius:0 8px 8px 0;padding:12px 16px;display:flex;flex-direction:column;gap:4px;font-size:15px}
+.wonder b.q{color:var(--green);font-family:var(--f-head);font-weight:600}
+.wonder.open{border-left-color:var(--blue);background:var(--blue-soft)}
+.wonder.open b.q{color:var(--blue)}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:700px){.checks{grid-template-columns:1fr}}
+.chk{border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.chk .v{font:600 30px/1.1 var(--f-head);font-variant-numeric:tabular-nums}
+.chk.ok .v{color:var(--green)} .chk.diff .v{color:var(--amber)}
+.chk .tag{font-size:14px;font-weight:600}
+.chk.ok .tag{color:var(--green)} .chk.diff .tag{color:var(--amber)}
+.note{border-left:3px solid var(--amber);background:var(--amber-soft);border-radius:0 8px 8px 0;padding:12px 16px;font-size:15px}
+.seqline{font:14px/1.9 var(--f-mono);background:var(--soft);border-radius:8px;padding:10px 14px;word-break:break-all}
+.seqline .w{background:var(--blue);color:#fff;border-radius:2px}
+.seqline .a{color:var(--amber);font-weight:600}
+.btns{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+button{font:600 15px var(--f-body);border-radius:8px;padding:9px 16px;cursor:pointer;border:1px solid var(--line);background:var(--white);color:var(--ink)}
+button:hover{border-color:var(--blue);color:var(--blue)}
+button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+button.sm{font-size:13.5px;padding:6px 12px}
+button.on{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+select,input[type=number]{font:15px var(--f-body);color:var(--ink);background:var(--white);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+input[type=range]{width:100%;accent-color:var(--blue)}
+textarea{font:13.5px var(--f-mono);color:var(--ink);background:var(--white);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-height:80px;resize:vertical;word-break:break-all}
+details summary{cursor:pointer;font-weight:600;color:var(--blue)}
+details[open] summary{margin-bottom:10px}
+.two{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;align-items:start}
+@media (max-width:780px){.two{grid-template-columns:1fr}}
+.calc{font:13.5px/1.7 var(--f-mono);background:var(--soft);border-radius:8px;padding:12px 14px;white-space:pre-wrap;word-break:break-word}
+.calc b{color:var(--blue)}
+canvas{display:block;width:100%;max-width:100%}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:14px;color:var(--muted)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.stats div{background:var(--soft);border-radius:8px;padding:10px 12px}
+.stats b{display:block;font:600 20px var(--f-head);font-variant-numeric:tabular-nums}
+.stats span{font-size:13px;color:var(--muted)}
+.fn{border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:0}
+.fn .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;padding:10px 14px;background:var(--soft);border-bottom:1px solid var(--line)}
+.fn .top code{font:500 14px var(--f-mono);color:var(--blue);background:none;padding:0}
+.fn .top span{font-size:13px;color:var(--muted)}
+.fn .body{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.fn pre{margin:0;font:12.5px/1.55 var(--f-mono);background:#f4f6fa;border:1px solid var(--line);border-radius:6px;padding:10px 12px;overflow-x:auto}
+.io{display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;font-size:14px;align-items:baseline;margin:0}
+.io dt{font:600 12px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.io dd{margin:0;font:13.5px var(--f-mono);word-break:break-word}
+.arrow{text-align:center;color:var(--muted);font-size:20px;line-height:1}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table.res{border-collapse:collapse;width:100%;font-size:14.5px}
+table.res th,table.res td{text-align:left;padding:7px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.res th{font-size:13px;font-weight:600;color:var(--muted);background:var(--soft)}
+table.res td.m{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.ok-t{color:var(--green);font-weight:600}
+code{font:13.5px var(--f-mono);background:var(--soft);padding:1px 5px;border-radius:4px}
+footer{font-size:13.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="course">Bioinformatics · FILS, POLITEHNICA Bucharest · Lab 08, part 2</div>
+    <h1>DNA Patterns Lab</h1>
+    <p class="lede">A 30-letter window slides along a DNA sequence. For every position it measures two things: how much C+G the window has, and how much it repeats itself. Each window becomes one point, and all the points together make a "pattern", a kind of fingerprint of the sequence.</p>
+  </header>
+
+  <section class="card" aria-labelledby="idea-h">
+    <h2 id="idea-h"><span class="n">0.</span>The idea</h2>
+    <div class="prose">
+      <p>A promoter is the stretch of DNA right before a gene, where the cell decides whether to read that gene. Promoters of different kinds of genes look different: some are full of C and G, some have a lot of A and T. Instead of reading the letters, this method turns a sequence into a picture, so different sequences can be compared at a glance.</p>
+    </div>
+    <table class="map-table">
+      <tr><td>Sliding window</td><td>Look at 30 letters, move one step, look again</td><td>seq[i:i+30]</td></tr>
+      <tr><td>C+G %</td><td>How much of the window is C or G</td><td>count / length × 100</td></tr>
+      <tr><td>Information content</td><td>How much the window repeats itself (low = repetitive, like AAAA…)</td><td>100 − average self-match %</td></tr>
+      <tr><td>Pattern</td><td>One point per window: x = C+G %, y = information content</td><td>list of (x, y)</td></tr>
+      <tr><td>Center of weight</td><td>The average point of the whole pattern</td><td>(mean x, mean y)</td></tr>
+    </table>
+  </section>
+
+  <section class="card" aria-labelledby="chk-h">
+    <h2 id="chk-h"><span class="n">1.</span>Checking the two functions on S</h2>
+    <p class="muted small">The board says the functions must give these values for the whole sequence S. In <span style="color:var(--amber);font-weight:600">orange</span>: the run of 27 A's.</p>
+    <div class="seqline" id="sView"></div>
+    <div class="checks">
+      <div class="chk" id="chkCG"></div>
+      <div class="chk" id="chkIC"></div>
+    </div>
+    <div class="note" id="icNote"></div>
+  </section>
+
+  <section class="card" aria-labelledby="sw-h">
+    <div>
+      <h2 id="sw-h"><span class="n">2.</span>The sliding window, one step at a time</h2>
+      <p class="muted small">Move the slider to pick a window. The blue letters are the 30 letters being measured.</p>
+    </div>
+    <div class="btns">
+      <span class="small muted" style="font-weight:600">Sequence:</span>
+      <select id="pick" aria-label="Sequence"></select>
+      <label class="small muted" for="win" style="font-weight:600">Window length</label>
+      <input type="number" id="win" value="30" min="5" max="200" style="width:90px">
+    </div>
+    <details>
+      <summary>Or paste your own sequence</summary>
+      <textarea id="own" spellcheck="false" placeholder="ACGT..."></textarea>
+      <div class="btns" style="margin-top:8px"><button id="useOwn">Use this sequence</button></div>
+    </details>
+    <input type="range" id="pos" min="0" value="0" aria-label="Window position">
+    <div class="seqline" id="winView"></div>
+    <div class="calc" id="winCalc"></div>
+  </section>
+
+  <section class="card" aria-labelledby="pat-h">
+    <div>
+      <h2 id="pat-h"><span class="n">3.</span>The pattern</h2>
+      <p class="muted small">Every dot is one window. Colour goes from dark (start of the sequence) to light (end). The red ✕ is the center of weight. The ringed dot is the window selected in step 2.</p>
+    </div>
+    <div class="two">
+      <canvas id="pat" aria-label="Pattern chart"></canvas>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="stats" id="patStats"></div>
+        <div class="wonder" id="patNote"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="cen-h">
+    <div>
+      <h2 id="cen-h"><span class="n">4.</span>Centers of all patterns</h2>
+      <p class="muted small">The center of weight of each pattern, on one chart: the lab sequence S plus six real human promoters (600 bp each, from the promoter file that comes with PromKappa).</p>
+    </div>
+    <div class="two">
+      <canvas id="cen" aria-label="Centers chart"></canvas>
+      <div class="tablewrap"><table class="res" id="cenTable"></table></div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="fn-h">
+    <h2 id="fn-h"><span class="n">5.</span>How the program works, function by function</h2>
+    <p class="muted">The same functions as in <code>part2_dna_patterns.py</code>, with the real values for the window selected in step 2.</p>
+    <div class="fn"><div class="top"><code>cg_content(seq)</code><span>the C+G function</span></div><div class="body">
+      <pre>def cg_content(seq):
+    return (seq.count("C") + seq.count("G")) / len(seq) * 100</pre>
+      <dl class="io"><dt>in</dt><dd id="f1in"></dd><dt>out</dt><dd id="f1out"></dd></dl></div></div>
+    <div class="arrow">↓</div>
+    <div class="fn"><div class="top"><code>information_content(seq)</code><span>the formula from the board</span></div><div class="body">
+      <pre>def self_match(seq):
+    n = len(seq)
+    total = 0
+    for u in range(1, n):
+        same = sum(f(seq[i], seq[i + u]) for i in range(n - u))
+        total += same / (n - u) * 100
+    return total / (n - 1)
+
+def information_content(seq):
+    return 100 - self_match(seq)</pre>
+      <p class="small">I copy the sequence, shift the copy by <i>u</i> letters, and count how many letters line up with themselves (f = 1 if equal, 0 if not). I do this for every shift from 1 to n − 1 and average the percentages. A repetitive window like AAAA… matches itself almost everywhere, so its self-match is high and its information content (100 − self-match) is low.</p>
+      <dl class="io"><dt>in</dt><dd id="f2in"></dd><dt>out</dt><dd id="f2out"></dd></dl></div></div>
+    <div class="arrow">↓</div>
+    <div class="fn"><div class="top"><code>pattern(seq, size)</code> + <code>center_of_weight(points)</code><span>all windows, then their average</span></div><div class="body">
+      <pre>def pattern(seq, size):
+    return [(i + 1, cg_content(w), information_content(w)) for i, w in sliding_windows(seq, size)]
+
+def center_of_weight(points):
+    n = len(points)
+    return sum(p[1] for p in points) / n, sum(p[2] for p in points) / n</pre>
+      <dl class="io"><dt>in</dt><dd id="f3in"></dd><dt>out</dt><dd id="f3out"></dd></dl></div></div>
+  </section>
+
+  <section class="card" aria-labelledby="pk-h">
+    <div>
+      <h2 id="pk-h"><span class="n">6.</span>Is my pattern the same as PromKappa's?</h2>
+      <p class="muted small">The last task on the board: run PromKappa from GitHub and check that the pattern is the same. PromKappa itself is a Windows program, but the same author also published the functions in JavaScript. I copied his two functions into this page unchanged and compare them with mine, window by window, for the sequence selected in step 2.</p>
+    </div>
+    <div class="btns"><button class="primary" id="cmpBtn">Compare with the original code</button><span class="small muted" id="cmpStatus"></span></div>
+    <div class="stats" id="cmpStats"></div>
+  </section>
+
+  <section class="card" aria-labelledby="w-h">
+    <h2 id="w-h"><span class="n">7.</span>Things I wondered, and what I found</h2>
+    <div id="wonders" style="display:flex;flex-direction:column;gap:10px"></div>
+  </section>
+
+  <footer>Method and original code: P. A. Gagniuc, PromKappa (github.com/Gagniuc/PromKappa-2.0-makes-Objective-Digital-Stains) and <i>Algorithms in Bioinformatics</i> (Wiley, 2021). Promoters: human promoters from the file distributed with PromKappa, positions −499 to +100. Everything runs in your browser.</footer>
+</div>
+
+<script>
+const S="CGGACTGATCTATCT"+"A".repeat(27)+"CGTAGCATCTATCGATCTATCTAGCGATCTATCTACTACG";
+const PROM={"GAPDH_1": "ACCGCAGAGCCTCGAGGAGAAGTTCCCCAACTTTCCCGCCTCTCAGCCTTTGAAAGAAAGAAAGGGGAGGGGGCAGGCCGCGTGCAGCCGCGAGCGGTGCTGGGCTCCGGCTCCAATTCCCCATCTCAGTCGTTCCCAAAGTCCTCCTGTTTCATCCAAGCGTGTAAGGGTCCCCGTCCTTGACTCCCTAGTGTCCTGCTGCCCACAGTCCAGTCCTGGGAACCAGCACCGATCACCTCCCATCGGGCCAATCTCAGTCCCTTCCCCCCTACGTCGGGGCCCACACGCTCGGTGCGTGCCCAGTTGAACCAGGCGGCTGCGGAAAAAAAAAAGCGGGGAGAAAGTAGGGCCCGGCTACTAGCGGTTTTACGGGCGCACGTAGCTCAGGCCTCAAGACCTTGGGCTGGGACTGGCTGAGCCTGGCGGGAGGCGGGGTCCGAGTCACCGCCTGCCGCCGCGCCCCCGGTTTCTATAAATTGAGCCCGCAGCCTCCCGCTTCGCTCTCTGCTCCTCCTGTTCGACAGTCAGCCGCATCTTCTTTTGCGTCGCCAGGTGAAGACGGGCGGAGAGAAACCCGGGAGGCTAGGGACGGCCTGAAGG", "ACTB_1": "CTGCCTGGCCACTCCATGCCCTCCAAGAGCTCCTTCTGCAGGAGCGTACAGAACCCAGGGCCCTGGCACCCGTGCAGACCCTGGCCCACCCCACCTGGGCGCTCAGTGCCCAAGAGATGTCCACACCTAGGATGTCCCGCGGTGGGTGGGGGGCCCGAGAGACGGGCAGGCCGGGGGCAGGCCTGGCCATGCGGGGCCGAACCGGGCACTGCCCAGCGTGGGGCGCGGGGGCCACGGCGCGCGCCCCCAGCCCCCGGGCCCAGCACCCCAAGGCGGCCAACGCCAAAACTCTCCCTCCTCCTCTTCCTCAATCTCGCTCTCGCTCTTTTTTTTTTTCGCAAAAGGAGGGGAGAGGGGGTAAAAAAATGCTGCACTGTGCGGCGAAGCCGGTGAGTGAGCGGCGCGGGGCCAATCAGCGTGCGCCGTTCCGAAAGTTGCCTTTTATGGCTCGAGCGGCCGCGGCGGCGCCCTATAAAACCCAGCGGCGCGACGCGCCACCACCGCCGAGACCGCGTCCGCCCCGCGAGCACAGAGCCTCGCCTTTGCCGATCCGCCGCCCGTCCACACCCGCCGCCAGGTAAGCCCGGCCAGCCGACCGGG", "TP53_1": "CGAGCTCTTACTTGCTACCCAGCACTGATATAGGCACTCAGGAATACAACAATGAATAAGATAGTAGAAAAATTCTATATCCTCATAAGGCTTACGTTTCCATGTACTGAAAGCAATGAACAAATAAATCTTATCAGAGTGATAAGGGTTGTGAAGGAGATTAAATAAGATGGTGTGATATAAAGTATCTGGGAGAAAACGTTAGGGTGTGATATTACGGAAAGCCTTCCTAAAAAATGACATTTTAACTGATGAGAAGAAAGGATCCAGCTGAGAGCAAACGCAAAAGCTTTCTTCCTTCCACCCTTCATATTTGACACAATGCAGGATTCCTCCAAAATGATTTCCACCAATTCTGCCCTCACAGCTCTGGCTTGCAGAATTTTCCACCCCAAAATGTTAGTATCTACGGCACCAGGTCGGCGAGAATCCTGACTCTGCACCCTCCTCCCCAACTCCATTTCCTTTGCTTCCTCCGGCAGGCGGATTACTTGCCCTTACTTGTCATGGCGACTGTCCAGCTTTGTGCCAGGAGCCTCGCAGGGGTTGATGGGATTGGGGTTTTCCCCTCCCATGTGCTCAAGACTGGCGCTAAAAGTT", "BRCA1_1": "TGGCAAACTCAGGTAGAATTCTTCCTCTTCCGTCTCTTTCCTTTTACGTCATCCGGGGGCAGACTGGGTGGCCAATCCAGAGCCCCGAGAGACGCTTGGCTCTTTCTGTCCCTCCCATCCTCTGATTGTACCTTGATTTCGTATTCTGAGAGGCTGCTGCTTAGCGGTAGCCCCTTGGTTTCCGTGGCAACGGAAAAGCGCGGGAATTACAGATAAATTAAAACTGCGACTGCGCGGCGTGAGCTCGCTGAGACTTCCTGGACGGGGGACAGGCTGTGGGGTTTCTCAGATAACTGGGCCCCTGCGCTCAGGAGGCCTTCACCCTCTGCTCTGGGTAAAGGTAGTAGAGTCCCGGGAAAGGGACAGGGGGCCCAAGTGATGCTCTGGGGTACTGGCGTGGGAGAGTGGATTTCCGAAGCTGACAGATGGGTATTCTTTGACGGGGGGTAGGGGCGGAACCTGAGAGGCGTAAGGCGTTGTGAACCCTGGGGAGGGGGGCAGTTTGTAGGTCGCGAGGGAAGCGCTGAGGATCAGGAAGGGGGCACTGAGTGTCCGTGGGGGAATCCTCGTGATAGGAACTGGAATATGCCTTGAGGGGGA", "INS_1": "GTGTGGGGACAGGGGTGTGGGGACAGGGGTCTGGGGACAGGGGTGTGGGGACAGGGGTCCTGGGGACAGGGGTGTGGGGATAGGGGTGTGGGGACAGGGGTGTGGGGACAGGGGTGTGGGGACAGGGGTCTGGGGACAGCAGCGCAAAGAGCCCCGCCCTGCAGCCTCCAGCTCTCCTGGTCTAATGTGGAAAGTGGCCCAGGTGAGGGCTTTGCTCTCCTGGAGACATTTGCCCCCAGCTGTGAGCAGGGACAGGTCTGGCCACCGGGCCCCTGGTTAAGACTCTAATGACCCGCTGGTCCTGAGGAAGAGGTGCTGACGACCAAGGAGATCTTCCCACAGACCCAGCACCAGGGAAATGGTCCGGAAATTGCAGCCTCAGCCCCCAGCCATCTGCCGACCCCCCCACCCCAGGCCCTAATGGGCCAGGCGGCAGGGGTTGAGAGGTAGGGGAGATGGGCTCTGAGACTATAAAGCCAGCGGGGGCCCAGCAGCCCTCAGCCCTCCAGGACAGGCTGCATCAGAAGAGGCCATCAAGCAGGTCTGTTCCAAGGGCCTTTGCGTCAGGTGGGCTCAGGATTCCAGGGTGGCTGGACCCCA", "HBB_1": "ATCCAAATAAGGAGAAGATATGCTTAGAACCGAGGTAGAGTTTTCATCCATTCTGTCCTGTAAGTATTTTGCATATTCTGGAGACGCAGGAAGAGATCCATCTACATATCCCAAAGCTGAATTATGGTAGACAAAACTCTTCCACTTTTAGTGCATCAACTTCTTATTTGTGTAATAAGAAAATTGGGAAAACGATCTTCAATATGCTTACCAAGCTGTGATTCCAAATATTACGTAAATACACTTGCAAAGGAGGATGTTTTTAGTAGCAATTTGTACTGATGGTATGGGGCCAAGAGATATATCTTAGAGGGAGGGCTGAGGGTTTGAAGTCCAACTCCTAAGCCAGTGCCAGAAGAGCCAAGGACAGGTACGGCTGTCATCACTTAGACCTCACCCTGTGGAGCCACACCCTAGGGTTGGCCAATCTACTCCCAGGAGCAGGGAGGGCAGGAGCCAGGGCTGGGCATAAAAGTCAGGGCAGAGCCATCTATTGCTTACATTTGCTTCTGACACAACTGTGTTCACTAGCAACCTCAAACAGACACCATGGTGCATCTGACTCCTGAGGAGAAGTCTGCCGTTACTGCCCTGTGGGGC"};
+const SEQS={"S (lab)":S,...Object.fromEntries(Object.entries(PROM).map(([k,v])=>[k.replace("_1",""),v]))};
+const $=id=>document.getElementById(id);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let curName="S (lab)",curSeq=S,W=30,pts=[],own=null;
+
+function cg(s){return ((s.split("C").length-1)+(s.split("G").length-1))/s.length*100;}
+function selfMatch(s){const n=s.length;let t=0;for(let u=1;u<n;u++){let m=0;for(let i=0;i<n-u;i++)if(s[i]===s[i+u])m++;t+=m/(n-u)*100;}return t/(n-1);}
+function ic(s){return 100-selfMatch(s);}
+function pattern(s,w){const o=[];for(let i=0;i+w<=s.length;i++){const x=s.substr(i,w);o.push([i+1,cg(x),ic(x)]);}return o;}
+function center(p){return [p.reduce((a,q)=>a+q[1],0)/p.length,p.reduce((a,q)=>a+q[2],0)/p.length];}
+
+function G_IC(s){var t=0;var m=0;var x=[];x=s.split('');for(var u=1;u<=(s.length-1);u++){for(var i=0;i<=(s.length-u);i++){m+=G_f(x[i],x[u+i]);}t+=(m/(s.length-u)*100);m=0;}return (100-(t/(s.length-1))).toFixed(2);}
+function G_f(x1,x2){if(x1==x2){return 1;}else{return 0;}}
+function G_GFN(s,m){var p=0;s=s.toLowerCase();m=m.toLowerCase();p=s.split(m).join('').length;p=(s.length-p)/(s.length);return (p*100).toFixed(2);}
+
+function checks(){
+  const c=cg(S),i=ic(S),k=selfMatch(S);
+  $("sView").innerHTML=S.replace(/A{27}/,m=>`<span class="a">${m}</span>`);
+  $("chkCG").className="chk ok";$("chkCG").innerHTML=`<span class="muted small">cg_content(S)</span><span class="v">${c.toFixed(2)} %</span><span class="tag">✓ board says ≈ 29.27</span>`;
+  $("chkIC").className="chk diff";$("chkIC").innerHTML=`<span class="muted small">information_content(S)</span><span class="v">${i.toFixed(2)}</span><span class="tag">board says ≈ 27.53 · without the "100 −" part: ${k.toFixed(2)}</span>`;
+  $("icNote").innerHTML=`<b>The C+G check passes, the information content check doesn't, and I checked why.</b> My function gives ${i.toFixed(2)}. I ran the original JavaScript function by the author of the method on the same S and it also gives ${i.toFixed(2)}, and the original PromKappa code (Visual Basic) gives ${k.toFixed(2)} without the "100 −". So the formula is right. The C+G value matches exactly, so the length and the number of C and G letters are right too. What can still be different is the <i>order</i> of some letters: the end of S was cut off on the board and I completed it as <code>…TCTACTACG</code>. If the real S is a bit different there, the information content changes but C+G does not. This is one of my questions for the professor.`;
+}
+
+function setSeq(name,seq){curName=name;curSeq=seq;W=Math.max(5,Math.min(+$("win").value||30,seq.length));pts=pattern(seq,W);
+  $("pos").max=Math.max(0,pts.length-1);if(+$("pos").value>pts.length-1)$("pos").value=0;
+  drawPattern();explore();functions();}
+
+function explore(){
+  const k=+$("pos").value,s=curSeq,w=s.substr(k,W),p=pts[k];if(!p)return;
+  const from=Math.max(0,k-40),to=Math.min(s.length,k+W+40);
+  $("winView").innerHTML=(from>0?"…":"")+s.slice(from,k)+`<span class="w">${w}</span>`+s.slice(k+W,to)+(to<s.length?"…":"");
+  const c=(w.split("C").length-1),g=(w.split("G").length-1),n=w.length;
+  const rows=[1,2,3].map(u=>{let m=0;for(let i=0;i<n-u;i++)if(w[i]===w[i+u])m++;return `shift ${u}: ${m} of ${n-u} letters match (${(m/(n-u)*100).toFixed(1)}%)`;}).join("\n");
+  $("winCalc").innerHTML=`<b>Window ${k+1} of ${pts.length}</b> (letters ${k+1}–${k+W})
+C+G: ${c} C + ${g} G = ${c+g} of ${n} → ${p[1].toFixed(2)} %
+Self-match: compare the window with itself shifted by 1, 2, … ${n-1} letters
+  ${rows.replace(/\n/g,"\n  ")}
+  … average over all ${n-1} shifts = ${(100-p[2]).toFixed(2)} %
+Information content = 100 − ${(100-p[2]).toFixed(2)} = <b>${p[2].toFixed(2)}</b>
+→ point (${p[1].toFixed(2)}, ${p[2].toFixed(2)}) on the chart`;
+  drawPattern();functions();
+}
+
+function axes(c,w,h,pad,xl,yl){
+  c.clearRect(0,0,w,h);c.strokeStyle=css("--line");c.lineWidth=1;c.fillStyle=css("--muted");c.font="11px "+css("--f-mono");
+  for(let v=0;v<=100;v+=20){const x=pad+v/100*(w-pad-10),y=h-pad-v/100*(h-pad-10);
+    c.beginPath();c.moveTo(x,10);c.lineTo(x,h-pad);c.stroke();c.beginPath();c.moveTo(pad,y);c.lineTo(w-10,y);c.stroke();
+    c.textAlign="center";c.fillText(v,x,h-pad+14);c.textAlign="right";c.fillText(v,pad-5,y+4);}
+  c.textAlign="center";c.font="12px "+css("--f-body");c.fillText(xl,pad+(w-pad-10)/2,h-4);
+  c.save();c.translate(12,(h-pad)/2);c.rotate(-Math.PI/2);c.fillText(yl,0,0);c.restore();
+  return [v=>pad+v/100*(w-pad-10),v=>h-pad-v/100*(h-pad-10)];
+}
+function setup(cv,ratio){const dpr=window.devicePixelRatio||1,w=cv.clientWidth||500,h=Math.round(w*ratio);cv.style.height=h+"px";cv.width=w*dpr;cv.height=h*dpr;const c=cv.getContext("2d");c.setTransform(dpr,0,0,dpr,0,0);return [c,w,h];}
+
+function drawPattern(){
+  const [c,w,h]=setup($("pat"),.82),[X,Y]=axes(c,w,h,42,"C+G %","Information content"),n=pts.length,sel=+$("pos").value;
+  pts.forEach((p,k)=>{const t=n>1?k/(n-1):0;c.fillStyle=`hsl(${215-t*120} 65% ${32+t*28}%)`;c.globalAlpha=.85;c.beginPath();c.arc(X(p[1]),Y(p[2]),3.2,0,7);c.fill();});
+  c.globalAlpha=1;const p=pts[sel];if(p){c.strokeStyle=css("--ink");c.lineWidth=2;c.beginPath();c.arc(X(p[1]),Y(p[2]),7,0,7);c.stroke();}
+  const [cx,cy]=center(pts);c.strokeStyle=css("--red");c.lineWidth=3;const r=7;
+  c.beginPath();c.moveTo(X(cx)-r,Y(cy)-r);c.lineTo(X(cx)+r,Y(cy)+r);c.moveTo(X(cx)+r,Y(cy)-r);c.lineTo(X(cx)-r,Y(cy)+r);c.stroke();
+  c.fillStyle=css("--red");c.font="600 12px "+css("--f-body");c.textAlign=cx>70?"right":"left";c.fillText(`center (${cx.toFixed(1)}, ${cy.toFixed(1)})`,X(cx)+(cx>70?-10:10),Y(cy)-10);
+  const cgs=pts.map(p=>p[1]),ics=pts.map(p=>p[2]);
+  $("patStats").innerHTML=[[curName,"sequence"],[curSeq.length+" bp",`${n} windows of ${W}`],[cx.toFixed(2),"center C+G %"],[cy.toFixed(2),"center IC"],[`${Math.min(...cgs).toFixed(0)}–${Math.max(...cgs).toFixed(0)}`,"C+G range"],[`${Math.min(...ics).toFixed(0)}–${Math.max(...ics).toFixed(0)}`,"IC range"]]
+    .map(([v,l])=>`<div><b>${v}</b><span>${l}</span></div>`).join("");
+  const lowest=pts.reduce((a,b)=>b[2]<a[2]?b:a);
+  $("patNote").innerHTML=`<b class="q">What I see</b><span>The lowest point is window ${lowest[0]} (IC ${lowest[2].toFixed(1)}, C+G ${lowest[1].toFixed(1)}%): <code>${curSeq.substr(lowest[0]-1,Math.min(W,30))}</code>. ${curName.startsWith("S")?"In S the dark dots (start) fall to the bottom left as the window slides into the 27 A's: almost no C/G and the window keeps matching itself. Then the light dots (end) climb back up to the right.":"Real promoters make a cloud rather than a line, because their letters are mixed. The position of the cloud (left or right) shows how GC-rich the promoter is."}</span>`;
+}
+
+function drawCenters(){
+  const [c,w,h]=setup($("cen"),.82),[X,Y]=axes(c,w,h,42,"C+G % (center)","Information content (center)");
+  const rows=Object.entries(SEQS).map(([n,s])=>{const ce=center(pattern(s,30));return [n,s.length,...ce];});
+  if(own)rows.push(["Your sequence",own.length,...center(pattern(own,Math.min(30,own.length)))]);
+  const off={"TP53":[-8,14,"right"],"HBB":[0,-10,"center"],"BRCA1":[0,20,"center"],"GAPDH":[4,-10,"left"],"INS":[0,20,"center"],"ACTB":[10,4,"left"]};
+  rows.forEach(([n,,x,y])=>{c.fillStyle=n.startsWith("S")?css("--red"):n.startsWith("Your")?css("--green"):css("--blue");c.beginPath();c.arc(X(x),Y(y),6,0,7);c.fill();
+    const [dx,dy,al]=off[n]||[8,-8,"left"];c.fillStyle=css("--ink");c.font="600 12px "+css("--f-body");c.textAlign=al;c.fillText(n,X(x)+dx,Y(y)+dy);});
+  $("cenTable").innerHTML="<tr><th>Sequence</th><th>Length</th><th>Center C+G %</th><th>Center IC</th></tr>"+rows.sort((a,b)=>a[2]-b[2]).map(([n,l,x,y])=>`<tr><td>${n}</td><td class="m">${l}</td><td class="m">${x.toFixed(2)}</td><td class="m">${y.toFixed(2)}</td></tr>`).join("");
+}
+
+function functions(){
+  const k=+$("pos").value,w=curSeq.substr(k,W),p=pts[k];if(!p)return;const [cx,cy]=center(pts);
+  $("f1in").textContent=`"${w}"`;$("f1out").textContent=`${p[1].toFixed(2)}`;
+  $("f2in").textContent=`"${w}"`;$("f2out").textContent=`self_match = ${(100-p[2]).toFixed(2)} → 100 − ${(100-p[2]).toFixed(2)} = ${p[2].toFixed(2)}`;
+  $("f3in").textContent=`${curName}, ${curSeq.length} letters, window ${W}`;$("f3out").textContent=`${pts.length} points → center (${cx.toFixed(2)}, ${cy.toFixed(2)})`;
+}
+
+function compare(){
+  $("cmpStatus").textContent="Comparing…";
+  setTimeout(()=>{let d=0,maxd=0;const n=pts.length;
+    for(let i=0;i<n;i++){const w=curSeq.substr(i,W),gc=+(+G_GFN(w,"C")+ +G_GFN(w,"G")).toFixed(2),gi=+G_IC(w);const dd=Math.max(Math.abs(gc-+pts[i][1].toFixed(2)),Math.abs(gi-+pts[i][2].toFixed(2)));if(dd>0.011)d++;maxd=Math.max(maxd,dd);}
+    $("cmpStatus").textContent=`${curName}, window ${W}`;
+    $("cmpStats").innerHTML=[[n,"windows compared"],[d===0?"✓ 0":d,"different values"],[maxd<=0.011?"≤ 0.01":maxd.toFixed(3),"largest difference (only rounding)"],[G_IC(curSeq),"original IC of the whole sequence"]].map(([v,l])=>`<div><b${d===0&&l==="different values"?' style="color:var(--green)"':""}>${v}</b><span>${l}</span></div>`).join("");},20);
+}
+
+function wonders(){
+  const C=Object.fromEntries(Object.entries(SEQS).map(([n,s])=>[n,center(pattern(s,30))]));
+  const runIC=ic("A".repeat(30)),mixIC=ic("ACGTACGTTGCAGTCATGCATCGATGCTAG".slice(0,30));
+  const Wn=[
+    ["Why is the information content of a run of A's so low?",`A window of 30 A's matches itself perfectly at every shift, so its self-match is 100% and its information content is ${runIC.toFixed(0)}. A mixed window like ACGTACGTTGCAG… only matches itself by chance, about 25% of the time, so its information content is about ${mixIC.toFixed(0)}. That's why the pattern of S dips as the window passes over the 27 A's: the measure is really "how un-repetitive is this piece".`],
+    ["Why 100 minus something?",`The formula on the board first measures how much the window looks like itself (the self-match). The "100 −" flips it, so a high value means a lot of different information and a low value means repetition. So the name "information content" makes sense: a string of A's carries almost no information.`],
+    ["Do the promoters really look different?",`Yes. GAPDH (${C.GAPDH[0].toFixed(0)}% C+G) and ACTB (${C.ACTB[0].toFixed(0)}%) are housekeeping genes, active in almost every cell, and their promoters sit far to the right: they are GC-rich, which fits what I read about CpG islands. HBB (hemoglobin, ${C.HBB[0].toFixed(0)}%) is only active in red blood cell precursors and sits much further left. I expected INS (insulin, also active in only one cell type) to be on the left too, but it's at ${C.INS[0].toFixed(0)}%. So "tissue-specific = low GC" is not a rule.`,true],
+    ["Is one point enough to describe a promoter?",`The center of weight squeezes 571 points into one. Two promoters can have the same center but very different clouds, for example one wide and one tight. That's probably why the method draws the whole pattern first and the center only second.`],
+    ["Why a window of 30?",`Try changing the window length in step 2. With a small window (10), every point jumps around a lot, because 10 letters is too few to measure a percentage well. With a large window (100), the pattern shrinks into a small blob and local features like the A-run disappear. 30 seems to be a compromise between noise and detail.`],
+    ["Why doesn't my information content match the board?",`See section 1. C+G matches, the formula matches the author's own code, so the difference must come from the sequence itself. That's my main question for the professor.`,true]
+  ];
+  $("wonders").innerHTML=Wn.map(([q,a,o])=>`<div class="wonder${o?" open":""}"><b class="q">${q}</b><span>${a}</span></div>`).join("");
+}
+
+$("pick").innerHTML=Object.keys(SEQS).map(n=>`<option>${n}</option>`).join("");
+$("pick").addEventListener("change",()=>{$("pos").value=0;setSeq($("pick").value,SEQS[$("pick").value]);});
+$("win").addEventListener("change",()=>{$("pos").value=0;setSeq(curName,curSeq);});
+$("pos").addEventListener("input",explore);
+$("useOwn").addEventListener("click",()=>{const s=$("own").value.split(/\r?\n/).filter(l=>!l.trim().startsWith(">")).join("").toUpperCase().replace(/[^ACGT]/g,"");
+  if(s.length<10)return;own=s;if(![...$("pick").options].some(o=>o.value==="Your sequence"))$("pick").insertAdjacentHTML("beforeend","<option>Your sequence</option>");
+  SEQS["Your sequence"]=s;$("pick").value="Your sequence";$("pos").value=0;setSeq("Your sequence",s);drawCenters();});
+$("cmpBtn").addEventListener("click",compare);
+let rt;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{drawPattern();drawCenters();},150);});
+checks();setSeq("S (lab)",S);drawCenters();wonders();
+</script>
+
+</body>
+</html>
