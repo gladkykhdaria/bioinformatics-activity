@@ -52,6 +52,14 @@ Lab 04 – Genome Assembly
 - Can cut with several enzymes at once and shows which enzyme made each cut.
 - Simulates the electrophoresis gel for each enzyme, for any mix, and for all 5 together.
 - Includes an HTML tool that shows every function step by step on the real data.
+
+
+### Lab 08 – Sequence Alignment (Needleman-Wunsch)
+- Aligns two DNA sequences from end to end with the Needleman-Wunsch algorithm.
+- Fills the score matrix and traces back the best path.
+- Shows the alignment, score, identity, and how many alignments are equally good.
+- Compares how different match, mismatch and gap scores change the result.
+- Includes an HTML tool that fills the matrix cell by cell and animates the traceback.
 ---
 
 **Language:** Python, HTML
