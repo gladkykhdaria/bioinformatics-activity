@@ -54,12 +54,13 @@ Lab 04 – Genome Assembly
 - Includes an HTML tool that shows every function step by step on the real data.
 
 
-### Lab 08 – Sequence Alignment (Needleman-Wunsch)
-- Aligns two DNA sequences from end to end with the Needleman-Wunsch algorithm.
-- Fills the score matrix and traces back the best path.
-- Shows the alignment, score, identity, and how many alignments are equally good.
-- Compares how different match, mismatch and gap scores change the result.
-- Includes an HTML tool that fills the matrix cell by cell and animates the traceback.
+### Lab 08 – Sequence Alignment and DNA Patterns
+- Aligns two DNA sequences with the Needleman-Wunsch algorithm and traces back the best path.
+- Compares how different match, mismatch and gap scores change the alignment.
+- Computes C+G % and information content for every 30-letter sliding window.
+- Plots the pattern of each sequence and the centers of weight of several human promoters.
+- Checks the results against the original PromKappa code (0 differences on 571 windows).
+- Includes HTML tools for the alignment matrix and the DNA patterns.
 ---
 
 **Language:** Python, HTML
